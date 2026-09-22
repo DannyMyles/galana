@@ -1,0 +1,508 @@
+// Galana Portal - Prisma schema
+// Domain model derived from docs/domain-entities.md (Section 4) and the user stories
+// in the build brief. Organised by bounded context; see build order in README.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Identity & Access
+// ---------------------------------------------------------------------------
+
+enum RoleName {
+  SYSTEM_ADMIN
+  FINANCE_MAKER
+  FINANCE_CHECKER
+  OPS_FUEL_CARD
+  STATION_DEALER_MANAGER
+  JAGUAR_CUSTOMER
+  INTERNAL_AUDITOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  phone        String?
+  passwordHash String?
+  status       UserStatus @default(ACTIVE)
+  roles        UserRole[]
+
+  station   Station? @relation(fields: [stationId], references: [id])
+  stationId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  topUpRequestsMade     WalletTopUpRequest[] @relation("MakerRequests")
+  topUpRequestsReviewed WalletTopUpRequest[] @relation("CheckerReviews")
+  auditLogs             AuditLog[]
+
+  @@index([status])
+}
+
+model Role {
+  id          String     @id @default(cuid())
+  name        RoleName   @unique
+  description String?
+  users       UserRole[]
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId String
+
+  @@unique([userId, roleId])
+}
+
+enum AuditResult {
+  SUCCESS
+  FAILURE
+}
+
+model AuditLog {
+  id            String      @id @default(cuid())
+  user          User?       @relation(fields: [userId], references: [id])
+  userId        String?
+  role          RoleName?
+  action        String
+  entityType    String
+  entityId      String?
+  oldValues     Json?
+  newValues     Json?
+  ipAddress     String?
+  device        String?
+  result        AuditResult
+  failureReason String?
+  createdAt     DateTime    @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Station, Dealer & Device Management
+// ---------------------------------------------------------------------------
+
+enum StationStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+model Dealer {
+  id                String    @id @default(cuid())
+  name              String
+  contactName       String?
+  contactPhone      String?
+  contactEmail      String?
+  settlementAccount String?
+  stations          Station[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Station {
+  id        String        @id @default(cuid())
+  name      String
+  code      String        @unique
+  region    String
+  county    String
+  address   String?
+  latitude  Float?
+  longitude Float?
+  status    StationStatus @default(ACTIVE)
+
+  dealer   Dealer? @relation(fields: [dealerId], references: [id])
+  dealerId String?
+
+  jplStationRef String? @unique // external id used for JPL OMC sync
+
+  products          StationProduct[]
+  posDevices        POSDevice[]
+  users             User[]
+  transactions      Transaction[]
+  settlements       DealerSettlement[]
+  ticketValidations TicketValidation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([region, county])
+}
+
+enum FuelProductCode {
+  PMS
+  AGO
+  LUBRICANTS
+  OTHER
+}
+
+model FuelProduct {
+  id       String           @id @default(cuid())
+  code     FuelProductCode
+  name     String
+  unit     String           @default("Litres")
+  stations StationProduct[]
+  prices   EpraPrice[]
+  tickets  Ticket[]
+
+  @@unique([code])
+}
+
+model StationProduct {
+  id        String      @id @default(cuid())
+  station   Station     @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  stationId String
+  product   FuelProduct @relation(fields: [productId], references: [id])
+  productId String
+  isActive  Boolean     @default(true)
+
+  @@unique([stationId, productId])
+}
+
+model EpraPrice {
+  id            String      @id @default(cuid())
+  product       FuelProduct @relation(fields: [productId], references: [id])
+  productId     String
+  pricePerLitre Decimal     @db.Decimal(10, 2)
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([productId, effectiveFrom])
+}
+
+enum POSStatus {
+  ACTIVE
+  INACTIVE
+  DECOMMISSIONED
+}
+
+model POSDevice {
+  id              String        @id @default(cuid())
+  deviceId        String        @unique
+  station         Station       @relation(fields: [stationId], references: [id])
+  stationId       String
+  softwareVersion String?
+  status          POSStatus     @default(ACTIVE)
+  lastSeenAt      DateTime?
+  transactions    Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stationId])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Customer, Vehicle & Ticketing (Jaguar side)
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id        String  @id @default(cuid())
+  name      String
+  tier      String? // e.g. "Tier-1 Fleet Corporate"
+  jaguarRef String? @unique // external Jaguar account reference
+
+  wallet      FuelWallet?
+  vehicles    Vehicle[]
+  tickets     Ticket[]
+  creditNotes CreditNote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Vehicle {
+  id         String   @id @default(cuid())
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId String
+  regNo      String   @unique
+  tickets    Ticket[]
+
+  createdAt DateTime @default(now())
+}
+
+enum TicketStatus {
+  ISSUED
+  PARTIALLY_REDEEMED
+  REDEEMED
+  EXPIRED
+  CANCELLED
+}
+
+model Ticket {
+  id                  String       @id @default(cuid())
+  ticketNo            String       @unique // e.g. GTK-001234
+  customer            Customer     @relation(fields: [customerId], references: [id])
+  customerId          String
+  vehicle             Vehicle?     @relation(fields: [vehicleId], references: [id])
+  vehicleId           String?
+  product             FuelProduct  @relation(fields: [productId], references: [id])
+  productId           String
+  authorisedQuantityL Decimal      @db.Decimal(10, 2)
+  remainingQuantityL  Decimal      @db.Decimal(10, 2)
+  otpHash             String?
+  qrCodeToken         String?      @unique
+  status              TicketStatus @default(ISSUED)
+  expiresAt           DateTime
+
+  transactions Transaction[]
+  validations  TicketValidation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([expiresAt])
+}
+
+enum ValidationMode {
+  OTP
+  QR_CODE
+}
+
+model TicketValidation {
+  id          String         @id @default(cuid())
+  ticket      Ticket         @relation(fields: [ticketId], references: [id])
+  ticketId    String
+  mode        ValidationMode
+  station     Station        @relation(fields: [stationId], references: [id])
+  stationId   String
+  validatedBy String? // user id of station manager/attendant
+  isValid     Boolean
+  reason      String?
+  createdAt   DateTime       @default(now())
+
+  @@index([ticketId])
+}
+
+// ---------------------------------------------------------------------------
+// Funding & Wallet (Jaguar prepayment)
+// ---------------------------------------------------------------------------
+
+model FuelWallet {
+  id         String   @id @default(cuid())
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId String   @unique
+  balance    Decimal  @default(0) @db.Decimal(14, 2) // usable fuel-wallet balance
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  topUpRequests   WalletTopUpRequest[]
+  prepaidReceipts PrepaidReceipt[]
+}
+
+enum TopUpStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+model WalletTopUpRequest {
+  id             String      @id @default(cuid())
+  wallet         FuelWallet  @relation(fields: [walletId], references: [id])
+  walletId       String
+  fundingAccount String // e.g. "KES 1234567890 (Jaguar)"
+  amount         Decimal     @db.Decimal(14, 2)
+  reference      String
+  remarks        String?
+  status         TopUpStatus @default(PENDING_APPROVAL)
+
+  maker          User      @relation("MakerRequests", fields: [makerId], references: [id])
+  makerId        String
+  checker        User?     @relation("CheckerReviews", fields: [checkerId], references: [id])
+  checkerId      String?
+  checkerComment String?
+  decidedAt      DateTime?
+
+  prepaidReceipt PrepaidReceipt?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+// A confirmed, approved funding event -- the gross Jaguar prepayment,
+// distinct from the fuel wallet balance and from any credit-note balance.
+model PrepaidReceipt {
+  id             String             @id @default(cuid())
+  wallet         FuelWallet         @relation(fields: [walletId], references: [id])
+  walletId       String
+  topUpRequest   WalletTopUpRequest @relation(fields: [topUpRequestId], references: [id])
+  topUpRequestId String             @unique
+  grossAmount    Decimal            @db.Decimal(14, 2)
+  receivedAt     DateTime           @default(now())
+}
+
+enum CreditNoteStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Tracks the Jaguar commercial discount, settled separately from the
+// fuel wallet balance per the discount/credit-note rule in the brief.
+model CreditNote {
+  id           String            @id @default(cuid())
+  customer     Customer          @relation(fields: [customerId], references: [id])
+  customerId   String
+  settlement   DealerSettlement? @relation(fields: [settlementId], references: [id])
+  settlementId String?
+  amount       Decimal           @db.Decimal(14, 2)
+  reason       String?
+  status       CreditNoteStatus  @default(PENDING)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Transaction Engine (state machine)
+// ---------------------------------------------------------------------------
+
+enum TransactionStatus {
+  INITIATED
+  TICKET_VALIDATED
+  FUEL_AUTHORISATION_PENDING
+  AUTHORISED
+  FUELLING_IN_PROGRESS
+  COMPLETED
+  REJECTED
+  CANCELLED
+  EXPIRED
+  FAILED
+  REVERSED
+  PENDING_RECONCILIATION
+}
+
+model Transaction {
+  id          String     @id @default(cuid())
+  reference   String     @unique // e.g. TXN-001234
+  ticket      Ticket     @relation(fields: [ticketId], references: [id])
+  ticketId    String
+  station     Station    @relation(fields: [stationId], references: [id])
+  stationId   String
+  posDevice   POSDevice? @relation(fields: [posDeviceId], references: [id])
+  posDeviceId String?
+
+  status         TransactionStatus @default(INITIATED)
+  authorisedQtyL Decimal           @db.Decimal(10, 2)
+  dispensedQtyL  Decimal?          @db.Decimal(10, 2)
+  unitTariff     Decimal           @db.Decimal(10, 2)
+  totalAmount    Decimal?          @db.Decimal(14, 2)
+
+  failureReason  String?
+  idempotencyKey String? @unique
+
+  settlement            DealerSettlement?
+  reconciliationRecords ReconciliationRecord[]
+  exceptions            ExceptionQueueItem[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  @@index([status])
+  @@index([stationId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Financial & Settlement
+// ---------------------------------------------------------------------------
+
+enum SettlementStatus {
+  PENDING
+  SETTLED
+  REVERSED
+}
+
+model DealerSettlement {
+  id                        String           @id @default(cuid())
+  transaction               Transaction      @relation(fields: [transactionId], references: [id])
+  transactionId             String           @unique
+  station                   Station          @relation(fields: [stationId], references: [id])
+  stationId                 String
+  grossAmount               Decimal          @db.Decimal(14, 2)
+  underCanopyDiscount       Decimal          @default(0) @db.Decimal(14, 2)
+  jaguarContractualDiscount Decimal          @default(0) @db.Decimal(14, 2)
+  netPayableToDealer        Decimal          @db.Decimal(14, 2)
+  status                    SettlementStatus @default(PENDING)
+  creditNotes               CreditNote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Reconciliation
+// ---------------------------------------------------------------------------
+
+enum ReconciliationLevel {
+  TICKET
+  TRANSACTION
+  FINANCIAL
+}
+
+enum ReconciliationStatus {
+  MATCHED
+  EXCEPTION
+  RESOLVED
+}
+
+model ReconciliationRecord {
+  id            String               @id @default(cuid())
+  level         ReconciliationLevel
+  transaction   Transaction?         @relation(fields: [transactionId], references: [id])
+  transactionId String?
+  status        ReconciliationStatus @default(MATCHED)
+  details       Json?
+  createdAt     DateTime             @default(now())
+
+  exceptionItem ExceptionQueueItem?
+}
+
+enum ExceptionStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+model ExceptionQueueItem {
+  id                     String                @id @default(cuid())
+  reconciliationRecord   ReconciliationRecord? @relation(fields: [reconciliationRecordId], references: [id])
+  reconciliationRecordId String?               @unique
+  transaction            Transaction?          @relation(fields: [transactionId], references: [id])
+  transactionId          String?
+  reason                 String
+  status                 ExceptionStatus       @default(OPEN)
+  resolutionNotes        String?
+  resolvedAt             DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
