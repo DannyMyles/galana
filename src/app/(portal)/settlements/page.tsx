@@ -1,3 +1,4 @@
+import { Landmark, ListChecks } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard } from "@/components/shared/kpi-card"
 import { MoneyDisplay } from "@/components/shared/money-display"
@@ -18,8 +19,18 @@ export default async function SettlementsPage({
       <PageHeader title="Settlements" description="Dealer settlements created from completed transactions" />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
-        <KpiCard label="Outstanding Dealer Liability" value={<MoneyDisplay amount={outstandingLiability} />} />
-        <KpiCard label="Total Settlement Records" value={totalRows.toString()} />
+        <KpiCard
+          label="Outstanding Dealer Liability"
+          value={<MoneyDisplay amount={outstandingLiability} />}
+          icon={Landmark}
+          iconTint="amber"
+        />
+        <KpiCard
+          label="Total Settlement Records"
+          value={totalRows.toString()}
+          icon={ListChecks}
+          iconTint="blue"
+        />
       </div>
 
       <SettlementsTable rows={rows} totalRows={totalRows} pageSize={pageSize} />

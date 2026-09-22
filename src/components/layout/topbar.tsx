@@ -33,7 +33,7 @@ export function Topbar({
   onMenuClick: () => void
 }) {
   return (
-    <header className="relative z-[60] flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6">
+    <header className="relative z-[60] flex h-16 items-center justify-between gap-4 border-b border-border/60 bg-background px-4 sm:px-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={onMenuClick} aria-label="Toggle navigation">
           <Menu className="size-5" />
@@ -49,8 +49,8 @@ export function Topbar({
       </div>
 
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex items-center gap-3 rounded-md p-1.5 hover:bg-accent">
-          <Avatar className="size-8">
+        <DropdownMenuTrigger className="flex items-center gap-3 rounded-xl p-1.5 transition-colors hover:bg-accent">
+          <Avatar className="size-9">
             <AvatarFallback>{initials(userName)}</AvatarFallback>
           </Avatar>
           <div className="hidden text-left text-sm sm:block">

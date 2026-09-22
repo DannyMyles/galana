@@ -92,10 +92,10 @@ export function StatusBadge({
   status: PortalStatus | (string & {})
   className?: string
 }) {
-  const style = STATUS_STYLES[status as PortalStatus] ?? "bg-slate-100 text-slate-700 border-slate-200"
+  const style = STATUS_STYLES[status as PortalStatus] ?? "bg-slate-100 text-slate-600 border-transparent"
 
   return (
-    <Badge variant="outline" className={cn("font-medium", style, className)}>
+    <Badge variant="outline" className={cn("font-medium px-2.5", style, className)}>
       {toLabel(status)}
     </Badge>
   )

@@ -15,14 +15,20 @@ export default async function FailedTransactionsPage() {
       />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <KpiCard label="Open Exceptions" value={stats.openCount.toString()} icon={AlertTriangle} />
+        <KpiCard label="Open Exceptions" value={stats.openCount.toString()} icon={AlertTriangle} iconTint="red" />
         <KpiCard
           label="Avg Resolution Time"
           value={`${stats.avgResolutionMinutes}m`}
           icon={Clock}
+          iconTint="amber"
           helperText="Target SLA threshold: ≤ 20m"
         />
-        <KpiCard label="Resolved Today" value={stats.resolvedTodayCount.toString()} icon={CheckCircle2} />
+        <KpiCard
+          label="Resolved Today"
+          value={stats.resolvedTodayCount.toString()}
+          icon={CheckCircle2}
+          iconTint="emerald"
+        />
       </div>
 
       <ExceptionWorkspace items={items} />

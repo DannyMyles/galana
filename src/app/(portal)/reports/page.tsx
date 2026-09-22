@@ -1,3 +1,15 @@
+import {
+  Wallet,
+  Fuel,
+  Landmark,
+  AlertTriangle,
+  Building2,
+  Cpu,
+  ArrowLeftRight,
+  Clock,
+  Ticket,
+  ShieldCheck,
+} from "lucide-react"
 import { auth } from "@/auth"
 import { hasPermission } from "@/lib/rbac/roles"
 import { PageHeader } from "@/components/shared/page-header"
@@ -54,25 +66,62 @@ export default async function ReportsPage() {
 
         {finance && (
           <TabsContent value="finance" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <KpiCard label="Total Jaguar Funding" value={<MoneyDisplay amount={finance.totalFunding} />} />
-            <KpiCard label="Fuel Wallet Balance" value={<MoneyDisplay amount={finance.walletBalance} />} />
+            <KpiCard
+              label="Total Jaguar Funding"
+              value={<MoneyDisplay amount={finance.totalFunding} />}
+              icon={Wallet}
+              iconTint="blue"
+            />
+            <KpiCard
+              label="Fuel Wallet Balance"
+              value={<MoneyDisplay amount={finance.walletBalance} />}
+              icon={Wallet}
+              iconTint="purple"
+            />
             <KpiCard
               label="Total Consumption"
               value={<LitresDisplay litres={finance.totalConsumptionLitres} />}
+              icon={Fuel}
+              iconTint="amber"
             />
-            <KpiCard label="Dealer Settlement Liability" value={<MoneyDisplay amount={finance.dealerLiability} />} />
-            <KpiCard label="Outstanding Reconciliation" value={finance.outstandingReconciliation.toString()} />
+            <KpiCard
+              label="Dealer Settlement Liability"
+              value={<MoneyDisplay amount={finance.dealerLiability} />}
+              icon={Landmark}
+              iconTint="red"
+            />
+            <KpiCard
+              label="Outstanding Reconciliation"
+              value={finance.outstandingReconciliation.toString()}
+              icon={AlertTriangle}
+              iconTint="emerald"
+            />
           </TabsContent>
         )}
 
         {ops && (
           <TabsContent value="ops" className="flex flex-col gap-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <KpiCard label="Active Stations" value={ops.activeStations.toString()} />
-              <KpiCard label="Active POS Devices" value={ops.activePosDevices.toString()} />
-              <KpiCard label="Today's Transactions" value={ops.todaysTransactions.toString()} />
-              <KpiCard label="Failed Transactions" value={ops.failedTransactions.toString()} />
-              <KpiCard label="Tickets Approaching Expiry" value={ops.expiringTickets.toString()} />
+              <KpiCard label="Active Stations" value={ops.activeStations.toString()} icon={Building2} iconTint="blue" />
+              <KpiCard label="Active POS Devices" value={ops.activePosDevices.toString()} icon={Cpu} iconTint="purple" />
+              <KpiCard
+                label="Today's Transactions"
+                value={ops.todaysTransactions.toString()}
+                icon={ArrowLeftRight}
+                iconTint="emerald"
+              />
+              <KpiCard
+                label="Failed Transactions"
+                value={ops.failedTransactions.toString()}
+                icon={AlertTriangle}
+                iconTint="red"
+              />
+              <KpiCard
+                label="Tickets Approaching Expiry"
+                value={ops.expiringTickets.toString()}
+                icon={Clock}
+                iconTint="amber"
+              />
             </div>
             <Card>
               <CardHeader>
@@ -98,12 +147,19 @@ export default async function ReportsPage() {
 
         {jaguar && (
           <TabsContent value="jaguar" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <KpiCard label="Total Prepaid Balance" value={<MoneyDisplay amount={jaguar.prepaidBalance} />} />
+            <KpiCard
+              label="Total Prepaid Balance"
+              value={<MoneyDisplay amount={jaguar.prepaidBalance} />}
+              icon={Wallet}
+              iconTint="blue"
+            />
             <KpiCard
               label="Total Consumption"
               value={<LitresDisplay litres={jaguar.totalConsumptionLitres} />}
+              icon={Fuel}
+              iconTint="amber"
             />
-            <KpiCard label="Active Tickets" value={jaguar.activeTickets.toString()} />
+            <KpiCard label="Active Tickets" value={jaguar.activeTickets.toString()} icon={Ticket} iconTint="purple" />
           </TabsContent>
         )}
 
@@ -112,11 +168,33 @@ export default async function ReportsPage() {
             <KpiCard
               label="Station Consumption"
               value={<LitresDisplay litres={dealer.stationConsumptionLitres} />}
+              icon={Fuel}
+              iconTint="amber"
             />
-            <KpiCard label="Current Dealer Credits" value={<MoneyDisplay amount={dealer.currentCredits} />} />
-            <KpiCard label="Transaction History" value={dealer.transactionCount.toString()} />
-            <KpiCard label="Failed Transactions" value={dealer.failedTransactions.toString()} />
-            <KpiCard label="Settled Records" value={dealer.settledCount.toString()} />
+            <KpiCard
+              label="Current Dealer Credits"
+              value={<MoneyDisplay amount={dealer.currentCredits} />}
+              icon={Landmark}
+              iconTint="blue"
+            />
+            <KpiCard
+              label="Transaction History"
+              value={dealer.transactionCount.toString()}
+              icon={ArrowLeftRight}
+              iconTint="purple"
+            />
+            <KpiCard
+              label="Failed Transactions"
+              value={dealer.failedTransactions.toString()}
+              icon={AlertTriangle}
+              iconTint="red"
+            />
+            <KpiCard
+              label="Settled Records"
+              value={dealer.settledCount.toString()}
+              icon={ShieldCheck}
+              iconTint="emerald"
+            />
           </TabsContent>
         )}
       </Tabs>

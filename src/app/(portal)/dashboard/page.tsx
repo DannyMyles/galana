@@ -29,21 +29,25 @@ export default async function DashboardPage() {
           label="Fuel Wallet Balance"
           value={<MoneyDisplay amount={data.walletBalance} />}
           icon={Wallet}
+          iconTint="blue"
         />
         <KpiCard
           label="Total Consumption (MTD)"
           value={<LitresDisplay litres={data.monthConsumptionLitres} />}
           icon={Fuel}
+          iconTint="amber"
         />
         <KpiCard
           label="Completed Transactions"
           value={data.completedTransactionsCount.toLocaleString()}
           icon={CheckCircle2}
+          iconTint="emerald"
         />
         <KpiCard
           label="Pending Reconciliation"
           value={data.pendingReconciliationCount.toLocaleString()}
           icon={AlertTriangle}
+          iconTint="purple"
         />
       </div>
 

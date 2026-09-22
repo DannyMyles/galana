@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Plus } from "lucide-react"
+import { Plus, Wallet, Clock, CheckCircle2 } from "lucide-react"
 import { auth } from "@/auth"
 import { hasPermission } from "@/lib/rbac/roles"
 import { PageHeader } from "@/components/shared/page-header"
@@ -33,14 +33,23 @@ export default async function FundingWalletPage() {
       <WalletSubNav />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <KpiCard label="Fuel Wallet Balance" value={<MoneyDisplay amount={Number(wallet.balance)} />} />
+        <KpiCard
+          label="Fuel Wallet Balance"
+          value={<MoneyDisplay amount={Number(wallet.balance)} />}
+          icon={Wallet}
+          iconTint="blue"
+        />
         <KpiCard
           label="Pending Requests"
           value={requests.filter((r) => r.status === "PENDING_APPROVAL").length.toString()}
+          icon={Clock}
+          iconTint="amber"
         />
         <KpiCard
           label="Approved (All Time)"
           value={requests.filter((r) => r.status === "APPROVED").length.toString()}
+          icon={CheckCircle2}
+          iconTint="emerald"
         />
       </div>
 

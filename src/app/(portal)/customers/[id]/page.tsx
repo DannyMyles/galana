@@ -1,3 +1,4 @@
+import { Wallet, Car, Ticket as TicketIcon } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard } from "@/components/shared/kpi-card"
 import { MoneyDisplay } from "@/components/shared/money-display"
@@ -18,9 +19,16 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         <KpiCard
           label="Wallet Balance"
           value={customer.wallet ? <MoneyDisplay amount={String(customer.wallet.balance)} /> : "—"}
+          icon={Wallet}
+          iconTint="blue"
         />
-        <KpiCard label="Vehicles" value={customer.vehicles.length.toString()} />
-        <KpiCard label="Recent Tickets" value={customer.tickets.length.toString()} />
+        <KpiCard label="Vehicles" value={customer.vehicles.length.toString()} icon={Car} iconTint="amber" />
+        <KpiCard
+          label="Recent Tickets"
+          value={customer.tickets.length.toString()}
+          icon={TicketIcon}
+          iconTint="purple"
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

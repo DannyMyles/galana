@@ -58,11 +58,16 @@ export function PortalShell({
           showCloseButton={false}
           className="w-72 max-w-[85vw] gap-0 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground data-[side=left]:inset-y-auto data-[side=left]:top-16 data-[side=left]:bottom-0 data-[side=left]:h-auto"
         >
-          <SidebarNav roles={roles} onNavigate={() => updateOpen(false)} />
+          <SidebarNav
+            roles={roles}
+            userName={userName}
+            primaryRole={primaryRole}
+            onNavigate={() => updateOpen(false)}
+          />
         </SheetContent>
       </Sheet>
 
-      <main className="flex-1 overflow-y-auto bg-muted/30 p-6">{children}</main>
+      <main className="flex-1 overflow-y-auto bg-muted/30 p-6 lg:p-8">{children}</main>
     </div>
   )
 }
