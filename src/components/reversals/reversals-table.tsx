@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { DataTable } from "@/components/shared/data-table"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { MoneyDisplay } from "@/components/shared/money-display"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
@@ -12,6 +12,8 @@ import { ApprovalActionBar } from "@/components/shared/approval-action-bar"
 import { FilterBar, SelectFilter } from "@/components/shared/filters"
 import { ExportButton } from "@/components/shared/export-button"
 import { decideReversal } from "@/app/(portal)/reversals/actions"
+import { RowActions } from "@/components/shared/row-actions"
+import { Eye } from "@/components/icons"
 
 export interface ReversalRow {
   id: string
@@ -63,6 +65,7 @@ export function ReversalsTable({ rows, canApprove, currentUserId }: { rows: Reve
           <span className="text-sm text-muted-foreground">{row.original.decidedBy?.name ?? "—"}{row.original.decisionComment ? ` — ${row.original.decisionComment}` : ""}</span>
         ),
     },
+    actionsColumn<ReversalRow>((r) => <RowActions actions={[{ label: "View reversal", icon: Eye, href: `/reversals/${r.id}` }]} />),
   ]
 
   return (

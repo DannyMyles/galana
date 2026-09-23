@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 interface ApprovalActionBarProps {
   onApprove: (comment: string) => void | Promise<void>
@@ -75,9 +76,9 @@ export function ApprovalActionBar({
             <Button variant="outline" onClick={close}>
               Cancel
             </Button>
-            <Button variant={mode === "reject" ? "destructive" : "default"} disabled={busy || (mode === "reject" && !text.trim())} onClick={submit}>
-              {busy ? "Saving…" : mode === "approve" ? approveLabel : rejectLabel}
-            </Button>
+            <LoadingButton variant={mode === "reject" ? "destructive" : "default"} disabled={busy || (mode === "reject" && !text.trim())} onClick={submit} loading={busy} loadingText="Saving…">
+              {mode === "approve" ? approveLabel : rejectLabel}
+            </LoadingButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

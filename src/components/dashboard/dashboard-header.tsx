@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type ReactNode } from "react"
 import { LiveClock } from "@/components/dashboard/live-clock"
-import { format } from "date-fns"
 
 function greetingFor(date: Date) {
   const hour = date.getHours()

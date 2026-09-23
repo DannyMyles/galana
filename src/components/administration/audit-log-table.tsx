@@ -4,8 +4,9 @@ import { useState } from "react"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/shared/data-table"
+import { Eye } from "@/components/icons"
+import { RowActions } from "@/components/shared/row-actions"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
 import { DateFilter, FilterBar, SearchFilter, SelectFilter } from "@/components/shared/filters"
@@ -37,7 +38,7 @@ export function AuditLogTable({ rows, totalRows, pageSize, entityTypes }: { rows
     { header: "Action", cell: ({ row }) => <span className="font-medium">{row.original.action}</span> },
     { header: "Object", cell: ({ row }) => `${row.original.entityType}${row.original.entityId ? ` · ${row.original.entityId.slice(0, 8)}` : ""}` },
     { header: "Result", cell: ({ row }) => <StatusBadge status={row.original.result === "SUCCESS" ? "COMPLETED" : "FAILED"} /> },
-    { header: "", id: "open", cell: ({ row }) => <Button variant="ghost" size="sm" onClick={() => setSelected(row.original)}>Details</Button> },
+    actionsColumn<AuditLogRow>((r) => <RowActions actions={[{ label: "View event details", icon: Eye, onSelect: () => setSelected(r) }]} />),
   ]
 
   return (

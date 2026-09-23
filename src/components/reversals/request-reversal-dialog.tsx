@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { requestReversal } from "@/app/(portal)/reversals/actions"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 export function RequestReversalDialog({ transactionId, reference }: { transactionId: string; reference: string }) {
   const router = useRouter()
@@ -48,7 +49,7 @@ export function RequestReversalDialog({ transactionId, reference }: { transactio
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button disabled={busy || !reason.trim()} onClick={submit}>{busy ? "Submitting…" : "Submit for approval"}</Button>
+          <LoadingButton disabled={busy || !reason.trim()} onClick={submit} loading={busy} loadingText="Submitting…">{"Submit for approval"}</LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ROLES, ROLE_LABELS, type Role } from "@/lib/rbac/roles"
 import { userSchema } from "@/lib/validations/user"
 import { saveUser } from "@/app/(portal)/administration/users/actions"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 export interface UserValues {
   id?: string
@@ -25,7 +26,7 @@ export interface UserValues {
 
 const EMPTY: UserValues = { name: "", email: "", phone: "", status: "ACTIVE", roleNames: [], stationId: "" }
 
-export function UserFormDialog({ trigger, triggerContent, user, stations }: { trigger: ReactElement; triggerContent: ReactNode; user?: UserValues; stations: { id: string; name: string }[] }) {
+export function UserFormDialog({ trigger, triggerContent, user, stations }: { trigger: ReactElement; triggerContent?: ReactNode; user?: UserValues; stations: { id: string; name: string }[] }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [v, setV] = useState<UserValues>(user ?? EMPTY)
@@ -112,7 +113,7 @@ export function UserFormDialog({ trigger, triggerContent, user, stations }: { tr
             {error && <p className="rounded-xl bg-[#EB2239]/10 px-4 py-2.5 text-sm text-[#D01A2F]">{error}</p>}
             <DialogFooter>
               <Button variant="outline" onClick={() => close(false)}>Cancel</Button>
-              <Button disabled={busy} onClick={submit}>{busy ? "Saving…" : user ? "Save changes" : "Create user"}</Button>
+              <LoadingButton disabled={busy} onClick={submit} loading={busy} loadingText="Saving…">{user ? "Save changes" : "Create user"}</LoadingButton>
             </DialogFooter>
           </>
         )}

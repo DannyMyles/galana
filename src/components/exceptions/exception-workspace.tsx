@@ -22,6 +22,7 @@ import { DateTimeDisplay } from "@/components/shared/date-time-display"
 import { EmptyState } from "@/components/shared/empty-state"
 import type { ExceptionQueueRow } from "@/lib/data/exceptions"
 import { resolveException } from "@/app/(portal)/failed-transactions/actions"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 export function ExceptionWorkspace({ items, canResolve }: { items: ExceptionQueueRow[]; canResolve: boolean }) {
   const router = useRouter()
@@ -161,37 +162,37 @@ export function ExceptionWorkspace({ items, canResolve }: { items: ExceptionQueu
               {canResolve && selected.status !== "RESOLVED" ? (
               <div className="flex flex-col gap-2 border-t pt-4">
                 <p className="text-xs font-medium text-muted-foreground">EXECUTE RESOLUTION</p>
-                <Button
+                <LoadingButton
                   variant="outline"
                   size="sm"
                   disabled={pendingAction !== null}
                   onClick={() => handleResolve("RETRY")}
-                >
-                  {pendingAction === "RETRY" ? "Retrying…" : "Retry Authorization"}
-                </Button>
-                <Button
+                 loading={pendingAction === "RETRY"} loadingText="Retrying…">
+                  {"Retry Authorization"}
+                </LoadingButton>
+                <LoadingButton
                   variant="outline"
                   size="sm"
                   disabled={pendingAction !== null}
                   onClick={() => handleResolve("NOTIFY")}
-                >
-                  {pendingAction === "NOTIFY" ? "Notifying…" : "Notify Customer Maker"}
-                </Button>
-                <Button
+                 loading={pendingAction === "NOTIFY"} loadingText="Notifying…">
+                  {"Notify Customer Maker"}
+                </LoadingButton>
+                <LoadingButton
                   variant="outline"
                   size="sm"
                   disabled={pendingAction !== null}
                   onClick={() => handleResolve("OVERRIDE")}
-                >
-                  {pendingAction === "OVERRIDE" ? "Overriding…" : "Override with Admin Approval"}
-                </Button>
-                <Button
+                 loading={pendingAction === "OVERRIDE"} loadingText="Overriding…">
+                  {"Override with Admin Approval"}
+                </LoadingButton>
+                <LoadingButton
                   size="sm"
                   disabled={pendingAction !== null}
                   onClick={() => handleResolve("RESOLVE")}
-                >
-                  {pendingAction === "RESOLVE" ? "Saving…" : "Mark as Resolved"}
-                </Button>
+                 loading={pendingAction === "RESOLVE"} loadingText="Saving…">
+                  {"Mark as Resolved"}
+                </LoadingButton>
               </div>
               ) : selected.status !== "RESOLVED" ? (
                 <p className="border-t pt-4 text-xs text-muted-foreground">Read-only — resolution is handled by Operations or Finance.</p>

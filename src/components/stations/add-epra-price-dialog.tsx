@@ -4,7 +4,6 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus } from "@/components/icons"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -28,6 +27,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createEpraPriceSchema, type CreateEpraPriceInput } from "@/lib/validations/epra-price"
 import { createEpraPrice } from "@/app/(portal)/stations/epra-prices/actions"
+import { LoadingButton } from "@/components/shared/loading-button"
+import { AddButton } from "@/components/shared/add-button"
 
 interface ProductOption {
   id: string
@@ -61,10 +62,7 @@ export function AddEpraPriceDialog({ products }: { products: ProductOption[] }) 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>
-        <Plus className="size-4" />
-        Update EPRA Price
-      </DialogTrigger>
+      <DialogTrigger render={<AddButton label="Update EPRA price" />} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Update EPRA Price</DialogTitle>
@@ -131,9 +129,9 @@ export function AddEpraPriceDialog({ products }: { products: ProductOption[] }) 
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Updating…" : "Update Price"}
-              </Button>
+              <LoadingButton type="submit" disabled={form.formState.isSubmitting} loading={form.formState.isSubmitting} loadingText="Updating…">
+                {"Update Price"}
+              </LoadingButton>
             </DialogFooter>
           </form>
         </Form>

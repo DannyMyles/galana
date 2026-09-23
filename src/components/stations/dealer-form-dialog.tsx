@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createDealerSchema, type CreateDealerInput } from "@/lib/validations/dealer"
 import { createDealer, updateDealer } from "@/app/(portal)/stations/dealers/actions"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 export interface DealerValues extends Required<{ [K in keyof CreateDealerInput]: string }> {
   id?: string
@@ -16,7 +17,7 @@ export interface DealerValues extends Required<{ [K in keyof CreateDealerInput]:
 
 const EMPTY: DealerValues = { name: "", contactName: "", contactPhone: "", contactEmail: "", settlementAccount: "" }
 
-export function DealerFormDialog({ trigger, triggerContent, dealer }: { trigger: ReactElement; triggerContent: ReactNode; dealer?: DealerValues }) {
+export function DealerFormDialog({ trigger, triggerContent, dealer }: { trigger: ReactElement; triggerContent?: ReactNode; dealer?: DealerValues }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [v, setV] = useState<DealerValues>(dealer ?? EMPTY)
@@ -68,7 +69,7 @@ export function DealerFormDialog({ trigger, triggerContent, dealer }: { trigger:
         {error && <p className="rounded-xl bg-[#EB2239]/10 px-4 py-2.5 text-sm text-[#D01A2F]">{error}</p>}
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button disabled={busy} onClick={submit}>{busy ? "Saving…" : dealer ? "Save changes" : "Add dealer"}</Button>
+          <LoadingButton disabled={busy} onClick={submit} loading={busy} loadingText="Saving…">{dealer ? "Save changes" : "Add dealer"}</LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

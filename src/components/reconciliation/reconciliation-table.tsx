@@ -9,11 +9,14 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { DataTable } from "@/components/shared/data-table"
+import { Eye, CheckCircle2 } from "@/components/icons"
+import { RowActions } from "@/components/shared/row-actions"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
 import type { ReconciliationRow } from "@/lib/data/reconciliation"
 import { runReconciliationCheck, resolveReconciliationRecord } from "@/app/(portal)/reconciliation/actions"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 interface Details { subject?: string; expected?: string; actual?: string }
 
@@ -63,21 +66,29 @@ export function ReconciliationTable({ rows, canManage }: { rows: ReconciliationR
       header: "Resolution",
       cell: ({ row }) =>
         row.original.status === "EXCEPTION" ? (
-          canManage ? <Button size="sm" variant="outline" onClick={() => setResolving(row.original)}>Resolve</Button> : <span className="text-sm text-muted-foreground">Open</span>
+          <span className="text-sm text-[#D01A2F]">Open exception</span>
         ) : row.original.status === "RESOLVED" ? (
           <span className="block max-w-[240px] truncate text-sm text-muted-foreground" title={row.original.resolutionNotes ?? ""}>{row.original.resolutionNotes}</span>
         ) : <span className="text-sm text-muted-foreground">—</span>,
     },
+    actionsColumn<ReconciliationRow>((r) => (
+      <RowActions
+        actions={[
+          { label: "Resolve exception", icon: CheckCircle2, hidden: !(canManage && r.status === "EXCEPTION"), onSelect: () => setResolving(r) },
+          { label: "View transaction", icon: Eye, hidden: !r.transaction, href: r.transaction ? `/transactions/${r.transaction.id}` : undefined },
+        ]}
+      />
+    )),
   ]
 
   return (
     <div>
       {canManage && (
         <div className="mb-4 flex justify-end">
-          <Button onClick={handleRun} disabled={running || isPending}>
+          <LoadingButton onClick={handleRun} loading={running || isPending} loadingText="Running…">
             <RefreshCw className="size-4" />
-            {running ? "Running…" : "Run reconciliation"}
-          </Button>
+            Run reconciliation
+          </LoadingButton>
         </div>
       )}
       <DataTable columns={columns} data={rows} emptyTitle="Nothing reconciled yet" emptyDescription="Run a reconciliation to compare tickets, transactions and the financial ledger." />

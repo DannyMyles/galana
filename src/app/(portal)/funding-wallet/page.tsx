@@ -1,15 +1,15 @@
 import Link from "next/link"
-import { Plus, Wallet, Clock, CheckCircle2 } from "@/components/icons"
+import { Wallet, Clock, CheckCircle2 } from "@/components/icons"
 import { PageHeader } from "@/components/shared/page-header"
 import { WalletSubNav } from "@/components/wallet/wallet-subnav"
 import { KpiCard } from "@/components/shared/kpi-card"
 import { QueryTabs } from "@/components/shared/sub-nav"
-import { Button } from "@/components/ui/button"
 import { MoneyDisplay } from "@/components/shared/money-display"
 import { FundingHistoryTable } from "@/components/wallet/funding-history-table"
 import { getPrimaryWallet, getTopUpRequests, type TopUpFilters } from "@/lib/data/wallet"
 import { requirePermission } from "@/lib/rbac/guard"
 import { hasPermission } from "@/lib/rbac/roles"
+import { AddButton } from "@/components/shared/add-button"
 
 export default async function FundingWalletPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requirePermission("wallet:view")
@@ -28,7 +28,7 @@ export default async function FundingWalletPage({ searchParams }: { searchParams
       <PageHeader
         title="Funding & Wallet"
         description={`${wallet.customer.name} fuel wallet — the full prepaid amount is loaded; discounts are handled separately as credit notes.`}
-        actions={canCreate ? <Button render={<Link href="/funding-wallet/topup" />} nativeButton={false}><Plus className="size-4" />Top up request</Button> : undefined}
+        actions={canCreate ? <AddButton label="Top up request" render={<Link href="/funding-wallet/topup" />} nativeButton={false} /> : undefined}
       />
       <WalletSubNav />
 

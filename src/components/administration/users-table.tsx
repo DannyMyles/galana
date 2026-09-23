@@ -1,12 +1,9 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { Pencil } from "@/components/icons"
-import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/shared/data-table"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
-import { UserActionsMenu } from "@/components/administration/user-actions-menu"
-import { UserFormDialog } from "@/components/administration/user-form-dialog"
+import { UserRowActions } from "@/components/administration/user-actions-menu"
 import type { UserListRow } from "@/lib/data/users"
 import { ROLE_LABELS, type Role } from "@/lib/rbac/roles"
 
@@ -35,28 +32,13 @@ export function UsersTable({ users, stations, currentUserId }: { users: UserList
     },
     { header: "Station", cell: ({ row }) => stationName(row.original.stationId) ?? "—" },
     { header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    {
-      header: "Actions",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1">
-          <UserFormDialog
-            stations={stations}
-            trigger={<Button variant="ghost" size="icon-sm" aria-label={`Edit ${row.original.name}`} />}
-            triggerContent={<Pencil className="size-4" />}
-            user={{
-              id: row.original.id,
-              name: row.original.name,
-              email: row.original.email,
-              phone: row.original.phone ?? "",
-              status: row.original.status,
-              roleNames: row.original.roles.map((r) => r.role.name as Role),
-              stationId: row.original.stationId ?? "",
-            }}
-          />
-          {row.original.id !== currentUserId && <UserActionsMenu userId={row.original.id} status={row.original.status} />}
-        </div>
-      ),
-    },
+    actionsColumn<UserListRow>((u) => (
+      <UserRowActions
+        stations={stations}
+        isSelf={u.id === currentUserId}
+        user={{ id: u.id, name: u.name, email: u.email, phone: u.phone ?? "", status: u.status, roleNames: u.roles.map((r) => r.role.name as Role), stationId: u.stationId ?? "" }}
+      />
+    )),
   ]
 
   return <DataTable columns={columns} data={users} emptyTitle="No users yet" emptyDescription="Add a user to grant them access to the portal." />

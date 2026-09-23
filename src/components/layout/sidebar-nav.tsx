@@ -56,7 +56,7 @@ export function SidebarNav({
                 aria-label={item.label}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "group relative flex items-center text-[14px] font-medium transition-all duration-150",
+                  "group relative flex items-center text-[14px] font-medium outline-none transition-all duration-150 focus-visible:ring-[3px] focus-visible:ring-[#1226AA]/40",
                   collapsed ? "size-11 justify-center rounded-xl" : "gap-3.5 rounded-xl px-3.5 py-3",
                   isActive
                     ? "bg-gradient-to-r from-[#1226AA]/[0.12] to-[#1226AA]/[0.03] text-[#1226AA]"

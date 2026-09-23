@@ -14,6 +14,7 @@ import { MoneyDisplay, LitresDisplay } from "@/components/shared/money-display"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { completeTransaction, cancelTransaction, startFuelling } from "@/app/(portal)/dispensing/[transactionId]/actions"
 import type { TransactionStatus } from "@prisma/client"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 interface DispensingTransaction {
   id: string
@@ -148,9 +149,9 @@ export function DispensingPanel({ transaction }: { transaction: DispensingTransa
                   Start fuelling
                 </Button>
               ) : (
-                <Button disabled={busy || !!qtyError} onClick={() => run(() => completeTransaction(transaction.id, qty), "Transaction completed.")}>
-                  {busy ? "Completing…" : "Complete transaction"}
-                </Button>
+                <LoadingButton disabled={busy || !!qtyError} onClick={() => run(() => completeTransaction(transaction.id, qty), "Transaction completed.")} loading={busy} loadingText="Completing…">
+                  {"Complete transaction"}
+                </LoadingButton>
               )}
             </div>
           )}

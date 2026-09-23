@@ -5,14 +5,13 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { Plus } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DataTable } from "@/components/shared/data-table"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { MoneyDisplay } from "@/components/shared/money-display"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
@@ -20,6 +19,10 @@ import { ApprovalActionBar } from "@/components/shared/approval-action-bar"
 import { FilterBar, SearchFilter, SelectFilter } from "@/components/shared/filters"
 import { ExportButton } from "@/components/shared/export-button"
 import { createCreditNote, decideCreditNote } from "@/app/(portal)/credit-notes/actions"
+import { RowActions } from "@/components/shared/row-actions"
+import { Eye } from "@/components/icons"
+import { LoadingButton } from "@/components/shared/loading-button"
+import { AddButton } from "@/components/shared/add-button"
 
 export interface CreditNoteRow {
   id: string
@@ -65,7 +68,7 @@ function RecordDialog({ settlements }: { settlements: { id: string; label: strin
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}><Plus className="size-4" />Record credit note</DialogTrigger>
+      <DialogTrigger render={<AddButton label="Record credit note" />} />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Record credit note</DialogTitle>
@@ -90,7 +93,7 @@ function RecordDialog({ settlements }: { settlements: { id: string; label: strin
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button disabled={busy || !(Number(amount) > 0) || !reason.trim()} onClick={submit}>{busy ? "Saving…" : "Submit for approval"}</Button>
+          <LoadingButton loading={busy} loadingText="Saving…" disabled={!(Number(amount) > 0) || !reason.trim()} onClick={submit}>Submit for approval</LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -127,6 +130,7 @@ export function CreditNotesView({ rows, settlements, canCreate, canApprove, curr
           ) : <span className="text-sm text-muted-foreground">Awaiting checker</span>
         ) : <span className="text-sm text-muted-foreground">{row.original.checker?.name ?? "—"}{row.original.checkerComment ? ` — ${row.original.checkerComment}` : ""}</span>,
     },
+    actionsColumn<CreditNoteRow>((r) => <RowActions actions={[{ label: "View credit note", icon: Eye, href: `/credit-notes/${r.id}` }]} />),
   ]
 
   return (

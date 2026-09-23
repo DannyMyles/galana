@@ -7,43 +7,52 @@ import type { ColumnDef } from "@tanstack/react-table"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DataTable } from "@/components/shared/data-table"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { LitresDisplay } from "@/components/shared/money-display"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
 import type { TicketListRow } from "@/lib/data/tickets"
+import { RowActions } from "@/components/shared/row-actions"
+import { Eye } from "@/components/icons"
 
 const STATUSES = ["ISSUED", "PARTIALLY_REDEEMED", "REDEEMED", "EXPIRED", "CANCELLED"]
 
 const columns: ColumnDef<TicketListRow>[] = [
-  { header: "Ticket No.", accessorKey: "ticketNo" },
-  { header: "Customer", cell: ({ row }) => row.original.customer.name },
-  { header: "Vehicle Reg.", cell: ({ row }) => row.original.vehicle?.regNo ?? "—" },
-  { header: "Product", cell: ({ row }) => row.original.product.name },
+  { header: "Ticket No.", cell: ({ row }) => <Link href={`/fuel-tickets/${row.original.id}`} className="font-semibold text-[#1226AA] hover:underline">{row.original.ticketNo}</Link> },
   {
-    header: "Authorised Qty",
-    cell: ({ row }) => <LitresDisplay litres={String(row.original.authorisedQuantityL)} />,
+    header: "Customer / Vehicle",
+    cell: ({ row }) => (
+      <div>
+        <p className="font-medium">{row.original.customer.name}</p>
+        <p className="text-xs text-muted-foreground">{row.original.vehicle?.regNo ?? "No vehicle"}</p>
+      </div>
+    ),
   },
+  { header: "Product", cell: ({ row }) => row.original.product.name.replace(/\s*\(.*\)/, "") },
   {
-    header: "Remaining Qty",
-    cell: ({ row }) => <LitresDisplay litres={String(row.original.remainingQuantityL)} />,
+    header: "Remaining / Auth.",
+    cell: ({ row }) => (
+      <span className="whitespace-nowrap">
+        <LitresDisplay litres={String(row.original.remainingQuantityL)} />
+        <span className="text-muted-foreground"> / </span>
+        <LitresDisplay litres={String(row.original.authorisedQuantityL)} />
+      </span>
+    ),
   },
-  { header: "Expires", cell: ({ row }) => <DateTimeDisplay value={row.original.expiresAt} /> },
+  { header: "Expires", cell: ({ row }) => <DateTimeDisplay value={row.original.expiresAt} formatStr="dd MMM yyyy" /> },
   { header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
   {
-    header: "Latest fulfilment",
+    header: "Fulfilment",
     cell: ({ row }) => {
       const t = row.original.transactions[0]
       return t ? (
-        <div className="flex items-center gap-2">
-          <Link href={`/transactions/${t.id}`} className="font-semibold text-[#1226AA] hover:underline">{t.reference}</Link>
-          <StatusBadge status={t.status} />
-        </div>
+        <Link href={`/transactions/${t.id}`} className="font-semibold text-[#1226AA] hover:underline">{t.reference}</Link>
       ) : (
         <span className="text-muted-foreground">Not redeemed</span>
       )
     },
   },
+  actionsColumn<TicketListRow>((r) => <RowActions actions={[{ label: "View ticket", icon: Eye, href: `/fuel-tickets/${r.id}` }]} />),
 ]
 
 export function TicketsTable({

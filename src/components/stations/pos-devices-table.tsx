@@ -1,10 +1,21 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/shared/data-table"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
-import { PosDeviceStatusMenu } from "@/components/stations/pos-device-status-menu"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Eye, CheckCircle2, X as Ban } from "@/components/icons"
+import type { POSStatus } from "@prisma/client"
+import { RowActions } from "@/components/shared/row-actions"
+import { setPosDeviceStatus } from "@/app/(portal)/stations/pos-devices/actions"
 import type { PosDeviceListRow } from "@/lib/data/pos-devices"
+
+const POS_TRANSITIONS: Record<POSStatus, { label: string; next: POSStatus }[]> = {
+  ACTIVE: [{ label: "Mark inactive", next: "INACTIVE" }, { label: "Decommission", next: "DECOMMISSIONED" }],
+  INACTIVE: [{ label: "Reactivate", next: "ACTIVE" }, { label: "Decommission", next: "DECOMMISSIONED" }],
+  DECOMMISSIONED: [{ label: "Reactivate", next: "ACTIVE" }],
+}
 
 const ONLINE_WINDOW_MS = 15 * 60_000
 
@@ -17,8 +28,9 @@ function ago(date: Date | string) {
 }
 
 export function PosDevicesTable({ devices, approvedVersions, canManage }: { devices: PosDeviceListRow[]; approvedVersions: string[]; canManage: boolean }) {
+  const router = useRouter()
   const columns: ColumnDef<PosDeviceListRow>[] = [
-    { header: "Device ID", cell: ({ row }) => <span className="font-semibold">{row.original.deviceId}</span> },
+    { header: "Device ID", cell: ({ row }) => <Link href={`/stations/pos-devices/${row.original.id}`} className="font-semibold hover:text-[#1226AA] hover:underline">{row.original.deviceId}</Link> },
     { header: "Station", cell: ({ row }) => `${row.original.station.name} (${row.original.station.code})` },
     {
       header: "Software",
@@ -47,7 +59,23 @@ export function PosDevicesTable({ devices, approvedVersions, canManage }: { devi
       },
     },
     { header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    ...(canManage ? [{ header: "Actions", cell: ({ row }: { row: { original: PosDeviceListRow } }) => <PosDeviceStatusMenu deviceId={row.original.id} status={row.original.status} /> } as ColumnDef<PosDeviceListRow>] : []),
+    actionsColumn<PosDeviceListRow>((d) => (
+      <RowActions
+        actions={[
+          { label: "View device", icon: Eye, href: `/stations/pos-devices/${d.id}` },
+          ...(canManage ? POS_TRANSITIONS[d.status as POSStatus] : []).map((t) => ({
+            label: t.label,
+            icon: t.next === "ACTIVE" ? CheckCircle2 : Ban,
+            destructive: t.next === "DECOMMISSIONED",
+            menuOnly: true,
+            onSelect: async () => {
+              await setPosDeviceStatus(d.id, t.next)
+              router.refresh()
+            },
+          })),
+        ]}
+      />
+    )),
   ]
 
   return <DataTable columns={columns} data={devices} emptyTitle="No POS devices registered" emptyDescription="Register a device to authorise it for ticket redemption." />

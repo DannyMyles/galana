@@ -1,14 +1,20 @@
 import { prisma } from "@/lib/db/client"
 
 export async function getFinanceReport() {
-  const [funding, wallet, consumption, liability, exceptions] = await Promise.all([
+  const [funding, wallet, consumption, liability, exceptions, settlementsByStatus, creditNotesByStatus, recentTopUps] = await Promise.all([
     prisma.prepaidReceipt.aggregate({ _sum: { grossAmount: true } }),
     prisma.fuelWallet.findFirst(),
     prisma.transaction.aggregate({ where: { status: "COMPLETED" }, _sum: { dispensedQtyL: true } }),
     prisma.dealerSettlement.aggregate({ where: { status: "PENDING" }, _sum: { netPayableToDealer: true } }),
     prisma.reconciliationRecord.count({ where: { status: "EXCEPTION" } }),
+    prisma.dealerSettlement.groupBy({ by: ["status"], _count: { _all: true }, _sum: { netPayableToDealer: true } }),
+    prisma.creditNote.groupBy({ by: ["status"], _count: { _all: true }, _sum: { amount: true } }),
+    prisma.walletTopUpRequest.findMany({ orderBy: { createdAt: "desc" }, take: 5, select: { id: true, reference: true, amount: true, status: true, createdAt: true } }),
   ])
   return {
+    settlementsByStatus: settlementsByStatus.map((r) => ({ status: r.status as string, count: r._count._all, amount: Number(r._sum.netPayableToDealer ?? 0) })),
+    creditNotesByStatus: creditNotesByStatus.map((r) => ({ status: r.status as string, count: r._count._all, amount: Number(r._sum.amount ?? 0) })),
+    recentTopUps: recentTopUps.map((t) => ({ ...t, amount: Number(t.amount) })),
     totalFunding: Number(funding._sum.grossAmount ?? 0),
     walletBalance: Number(wallet?.balance ?? 0),
     totalConsumptionLitres: Number(consumption._sum.dispensedQtyL ?? 0),

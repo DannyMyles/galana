@@ -4,7 +4,6 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus } from "@/components/icons"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -28,6 +27,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createPosDeviceSchema, type CreatePosDeviceInput } from "@/lib/validations/pos-device"
 import { createPosDevice } from "@/app/(portal)/stations/pos-devices/actions"
+import { LoadingButton } from "@/components/shared/loading-button"
+import { AddButton } from "@/components/shared/add-button"
 
 interface StationOption {
   id: string
@@ -58,10 +59,7 @@ export function AddPosDeviceDialog({ stations }: { stations: StationOption[] }) 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>
-        <Plus className="size-4" />
-        Register POS Device
-      </DialogTrigger>
+      <DialogTrigger render={<AddButton label="Register POS device" />} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Register POS Device</DialogTitle>
@@ -122,9 +120,9 @@ export function AddPosDeviceDialog({ stations }: { stations: StationOption[] }) 
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Registering…" : "Register"}
-              </Button>
+              <LoadingButton type="submit" disabled={form.formState.isSubmitting} loading={form.formState.isSubmitting} loadingText="Registering…">
+                {"Register"}
+              </LoadingButton>
             </DialogFooter>
           </form>
         </Form>

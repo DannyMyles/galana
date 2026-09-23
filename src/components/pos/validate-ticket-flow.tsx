@@ -18,6 +18,7 @@ import {
   authoriseTicket,
   type ValidatedTicket,
 } from "@/app/(portal)/validate-ticket/actions"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 type Mode = "OTP" | "QR_CODE"
 
@@ -170,9 +171,9 @@ export function ValidateTicketFlow({ stationName }: { stationName: string }) {
                 </div>
               </TabsContent>
             </Tabs>
-            <Button onClick={handleValidate} disabled={isValidating || !credential.trim()} className="mt-5 w-full">
-              {isValidating ? "Validating…" : "Validate ticket"}
-            </Button>
+            <LoadingButton onClick={handleValidate} disabled={isValidating || !credential.trim()} className="mt-5 w-full" loading={isValidating} loadingText="Validating…">
+              {"Validate ticket"}
+            </LoadingButton>
           </CardContent>
         </Card>
 

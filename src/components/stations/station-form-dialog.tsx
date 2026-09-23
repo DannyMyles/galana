@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { stationSchema } from "@/lib/validations/station"
 import { saveStation } from "@/app/(portal)/stations/actions"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 export interface StationFormValues {
   id?: string
@@ -124,7 +125,7 @@ export function StationFormDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button disabled={busy} onClick={submit}>{busy ? "Saving…" : station ? "Save changes" : "Add station"}</Button>
+          <LoadingButton disabled={busy} onClick={submit} loading={busy} loadingText="Saving…">{station ? "Save changes" : "Add station"}</LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -4,8 +4,7 @@ import Link from "next/link"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/shared/data-table"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { MoneyDisplay } from "@/components/shared/money-display"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
@@ -14,6 +13,10 @@ import { FilterBar, SelectFilter } from "@/components/shared/filters"
 import { ExportButton } from "@/components/shared/export-button"
 import type { SettlementListRow } from "@/lib/data/settlements"
 import { markSettlementSettled } from "@/app/(portal)/settlements/actions"
+import { RowActions } from "@/components/shared/row-actions"
+import { Eye } from "@/components/icons"
+import { CheckCircle2 } from "@/components/icons"
+import { IconActionButton } from "@/components/shared/icon-action-button"
 
 export function SettlementsTable({ rows, totalRows, pageSize, stations, canManage }: { rows: SettlementListRow[]; totalRows: number; pageSize: number; stations?: { id: string; name: string }[]; canManage: boolean }) {
   const router = useRouter()
@@ -38,15 +41,13 @@ export function SettlementsTable({ rows, totalRows, pageSize, stations, canManag
     { header: "Under-canopy", cell: ({ row }) => <span className="text-[#D01A2F]">− <MoneyDisplay amount={Number(row.original.underCanopyDiscount)} /></span> },
     { header: "Net payable", cell: ({ row }) => <span className="font-semibold"><MoneyDisplay amount={Number(row.original.netPayableToDealer)} /></span> },
     { header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    ...(canManage
-      ? [{
-          header: "Action",
-          cell: ({ row }: { row: { original: SettlementListRow } }) =>
-            row.original.status === "PENDING" ? (
-              <ConfirmDialog trigger={<Button size="sm" />} triggerLabel="Mark settled" title="Mark this settlement as settled?" description="This confirms the dealer has been paid for this transaction." onConfirm={() => handleSettle(row.original.id)} />
-            ) : <span className="text-sm text-muted-foreground">—</span>,
-        } as ColumnDef<SettlementListRow>]
-      : []),
+    actionsColumn<SettlementListRow>((r) => (
+      <RowActions actions={[{ label: "View settlement", icon: Eye, href: `/settlements/${r.id}` }]}>
+        {canManage && r.status === "PENDING" && (
+          <ConfirmDialog trigger={<IconActionButton label="Mark settled" icon={CheckCircle2} />} title="Mark this settlement as settled?" description="This confirms the dealer has been paid for this transaction." confirmLabel="Mark settled" onConfirm={() => handleSettle(r.id)} />
+        )}
+      </RowActions>
+    )),
   ]
 
   return (

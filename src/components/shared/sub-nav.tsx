@@ -12,6 +12,8 @@ export function SubNav({ tabs }: { tabs: { label: string; href: string; permissi
   const roles = (session?.user?.roles ?? []) as Role[]
   const visible = tabs.filter((t) => !t.permission || !session || hasPermission(roles, t.permission))
 
+  if (visible.length < 2) return null
+
   return (
     <div className="mb-6 max-w-full overflow-x-auto">
       <div className="inline-flex gap-1 rounded-2xl bg-[#ECEEFA] p-1">
@@ -23,7 +25,7 @@ export function SubNav({ tabs }: { tabs: { label: string; href: string; permissi
               href={tab.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "rounded-xl px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-150",
+                "rounded-xl px-4 py-2 text-sm font-medium whitespace-nowrap outline-none transition-all duration-150 focus-visible:ring-[3px] focus-visible:ring-[#1226AA]/40",
                 isActive
                   ? "bg-white text-[#1226AA] shadow-sm"
                   : "text-[#5E6182] hover:bg-white/60 hover:text-[#0B0B33]"
@@ -59,7 +61,7 @@ export function QueryTabs({ param, tabs }: { param: string; tabs: { label: strin
               href={params.size ? `${pathname}?${params}` : pathname}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "rounded-xl px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-150",
+                "rounded-xl px-4 py-2 text-sm font-medium whitespace-nowrap outline-none transition-all duration-150 focus-visible:ring-[3px] focus-visible:ring-[#1226AA]/40",
                 isActive ? "bg-white text-[#1226AA] shadow-sm" : "text-[#5E6182] hover:bg-white/60 hover:text-[#0B0B33]"
               )}
             >

@@ -2,13 +2,21 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Pencil } from "@/components/icons"
-import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/shared/data-table"
+import { Eye, CheckCircle2, X as Ban } from "@/components/icons"
+import type { StationStatus } from "@prisma/client"
+import { setStationStatus } from "@/app/(portal)/stations/actions"
+import { RowActions } from "@/components/shared/row-actions"
+import { EditTrigger } from "@/components/shared/icon-action-button"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
-import { StationStatusMenu } from "@/components/stations/station-status-menu"
 import { StationFormDialog } from "@/components/stations/station-form-dialog"
 import type { StationListRow } from "@/lib/data/stations"
+
+const STATUS_TRANSITIONS: Record<StationStatus, { label: string; next: StationStatus }[]> = {
+  ACTIVE: [{ label: "Suspend", next: "SUSPENDED" }, { label: "Deactivate", next: "DEACTIVATED" }],
+  SUSPENDED: [{ label: "Reactivate", next: "ACTIVE" }, { label: "Deactivate", next: "DEACTIVATED" }],
+  DEACTIVATED: [{ label: "Reactivate", next: "ACTIVE" }],
+}
 
 export function StationsTable({
   rows,
@@ -16,12 +24,14 @@ export function StationsTable({
   pageSize,
   dealers,
   products,
+  canManage = true,
 }: {
   rows: StationListRow[]
   totalRows: number
   pageSize: number
   dealers: { id: string; name: string }[]
   products: { id: string; name: string }[]
+  canManage?: boolean
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -52,35 +62,46 @@ export function StationsTable({
       header: "JPL OMC sync",
       cell: ({ row }) => <StatusBadge status={row.original.jplSyncStatus} />,
     },
-    {
-      header: "Actions",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1">
+    actionsColumn<StationListRow>((r) => (
+      <RowActions
+        actions={[
+          { label: "View station", icon: Eye, href: `/stations/${r.id}` },
+          ...(canManage ? STATUS_TRANSITIONS[r.status as StationStatus] : []).map((t) => ({
+            label: t.label,
+            icon: t.next === "ACTIVE" ? CheckCircle2 : Ban,
+            destructive: t.next === "DEACTIVATED",
+            menuOnly: true,
+            onSelect: async () => {
+              await setStationStatus(r.id, t.next)
+              router.refresh()
+            },
+          })),
+        ]}
+      >
+        {canManage && (
           <StationFormDialog
             dealers={dealers}
             products={products}
             station={{
-              id: row.original.id,
-              name: row.original.name,
-              code: row.original.code,
-              region: row.original.region,
-              county: row.original.county,
-              address: row.original.address,
-              latitude: row.original.latitude,
-              longitude: row.original.longitude,
-              contactName: row.original.contactName,
-              contactPhone: row.original.contactPhone,
-              contactEmail: row.original.contactEmail,
-              dealerId: row.original.dealerId,
-              productIds: row.original.products.map((p) => p.productId),
+              id: r.id,
+              name: r.name,
+              code: r.code,
+              region: r.region,
+              county: r.county,
+              address: r.address,
+              latitude: r.latitude,
+              longitude: r.longitude,
+              contactName: r.contactName,
+              contactPhone: r.contactPhone,
+              contactEmail: r.contactEmail,
+              dealerId: r.dealerId,
+              productIds: r.products.map((p) => p.productId),
             }}
-            trigger={<Button variant="ghost" size="icon-sm" aria-label={`Edit ${row.original.name}`} />}
-            triggerContent={<Pencil className="size-4" />}
+            trigger={<EditTrigger label={`Edit ${r.name}`} />}
           />
-          <StationStatusMenu stationId={row.original.id} status={row.original.status} />
-        </div>
-      ),
-    },
+        )}
+      </RowActions>
+    )),
   ]
 
   return (

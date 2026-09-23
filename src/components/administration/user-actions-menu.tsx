@@ -2,69 +2,54 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal } from "@/components/icons"
 import { toast } from "sonner"
-
+import { Eye, CheckCircle2, X as Ban, ShieldCheck } from "@/components/icons"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { RowActions, type RowAction } from "@/components/shared/row-actions"
+import { EditTrigger } from "@/components/shared/icon-action-button"
+import { UserFormDialog, type UserValues } from "@/components/administration/user-form-dialog"
 import type { UserStatus } from "@prisma/client"
 import { setUserStatus, resetUserPassword } from "@/app/(portal)/administration/users/actions"
 
-export function UserActionsMenu({ userId, status }: { userId: string; status: UserStatus }) {
+export function UserRowActions({ user, stations, isSelf }: { user: UserValues & { id: string }; stations: { id: string; name: string }[]; isSelf: boolean }) {
   const router = useRouter()
   const [tempPassword, setTempPassword] = useState<string | null>(null)
+  const status = user.status as UserStatus
 
-  async function handleStatus(next: UserStatus) {
-    try {
-      await setUserStatus(userId, next)
-      router.refresh()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update user.")
-    }
+  const setStatus = (next: UserStatus) => async () => {
+    await setUserStatus(user.id, next)
+    toast.success("User updated.")
+    router.refresh()
   }
 
-  async function handleReset() {
-    try {
-      const result = await resetUserPassword(userId)
-      setTempPassword(result.tempPassword)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to reset password.")
-    }
-  }
+  const actions: RowAction[] = [
+    { label: "View user", icon: Eye, href: `/administration/users/${user.id}` },
+    { label: status === "ACTIVE" ? "Deactivate" : "Activate", icon: status === "ACTIVE" ? Ban : CheckCircle2, menuOnly: true, hidden: isSelf, destructive: status === "ACTIVE", onSelect: setStatus(status === "ACTIVE" ? "INACTIVE" : "ACTIVE") },
+    { label: "Suspend", icon: Ban, menuOnly: true, hidden: isSelf || status === "SUSPENDED", destructive: true, onSelect: setStatus("SUSPENDED") },
+    {
+      label: "Reset password",
+      icon: ShieldCheck,
+      menuOnly: true,
+      hidden: isSelf,
+      onSelect: async () => {
+        const result = await resetUserPassword(user.id)
+        setTempPassword(result.tempPassword)
+      },
+    },
+  ]
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>
-          <MoreHorizontal className="size-4" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {status === "ACTIVE" ? (
-            <DropdownMenuItem onClick={() => handleStatus("INACTIVE")}>Deactivate</DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem onClick={() => handleStatus("ACTIVE")}>Activate</DropdownMenuItem>
-          )}
-          {status !== "SUSPENDED" && (
-            <DropdownMenuItem onClick={() => handleStatus("SUSPENDED")}>Suspend</DropdownMenuItem>
-          )}
-          <DropdownMenuItem onClick={handleReset}>Reset Password</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
+      <RowActions actions={actions}>
+        <UserFormDialog stations={stations} user={user} trigger={<EditTrigger label={`Edit ${user.name}`} />} />
+      </RowActions>
       <Dialog open={!!tempPassword} onOpenChange={(open) => !open && setTempPassword(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Password Reset</DialogTitle>
+            <DialogTitle>Password reset</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Share this temporary password securely — it will not be shown again.
-          </p>
+          <p className="text-sm text-muted-foreground">Share this temporary password securely — it will not be shown again.</p>
           <code className="rounded-md bg-muted px-3 py-2 text-sm font-semibold tracking-wider">{tempPassword}</code>
           <DialogFooter>
             <Button onClick={() => setTempPassword(null)}>Done</Button>

@@ -2,6 +2,9 @@ import type { ComponentType } from "react"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import {
   Add01Icon,
+  ViewIcon,
+  Delete02Icon,
+  Copy01Icon,
   Alert02Icon,
   ArrowDown01Icon,
   ArrowDownRight01Icon,
@@ -118,3 +121,8 @@ export const Pencil = make(Edit02Icon)
 export const Route = make(Route01Icon)
 export const Link2 = make(Link01Icon)
 export const QrCode = make(QrCodeIcon)
+
+export const Eye = make(ViewIcon)
+export const Trash = make(Delete02Icon)
+export const Copy = make(Copy01Icon)
+export const ArrowLeft = make(ArrowLeft01Icon)

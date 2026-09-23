@@ -1,11 +1,13 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/shared/data-table"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { MoneyDisplay } from "@/components/shared/money-display"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
 import type { TransactionStatus } from "@prisma/client"
+import { RowActions } from "@/components/shared/row-actions"
+import { Eye } from "@/components/icons"
 
 export interface RecentTransactionRow {
   id: string
@@ -36,6 +38,7 @@ const columns: ColumnDef<RecentTransactionRow>[] = [
     header: "Status",
     cell: ({ row }) => <StatusBadge status={row.original.status} />,
   },
+  actionsColumn<RecentTransactionRow>((r) => <RowActions actions={[{ label: "View trace", icon: Eye, href: `/transactions/${r.id}` }]} />),
 ]
 
 export function RecentTransactionsTable({ rows }: { rows: RecentTransactionRow[] }) {

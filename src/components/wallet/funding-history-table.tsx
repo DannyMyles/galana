@@ -1,13 +1,15 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/shared/data-table"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { MoneyDisplay } from "@/components/shared/money-display"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
 import { FilterBar, SearchFilter, SelectFilter } from "@/components/shared/filters"
 import { ExportButton } from "@/components/shared/export-button"
 import type { TopUpRequestRow } from "@/lib/data/wallet"
+import { RowActions } from "@/components/shared/row-actions"
+import { Eye } from "@/components/icons"
 
 const columns: ColumnDef<TopUpRequestRow>[] = [
   { header: "Date & time", cell: ({ row }) => <DateTimeDisplay value={row.original.createdAt} /> },
@@ -27,6 +29,7 @@ const columns: ColumnDef<TopUpRequestRow>[] = [
         "—"
       ),
   },
+  actionsColumn<TopUpRequestRow>((r) => <RowActions actions={[{ label: "View request", icon: Eye, href: `/funding-wallet/${r.id}` }]} />),
 ]
 
 export function FundingHistoryTable({ rows }: { rows: TopUpRequestRow[] }) {

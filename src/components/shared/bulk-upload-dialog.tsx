@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Download, Upload } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 export interface BulkResult {
   created: number
@@ -114,7 +115,7 @@ export function BulkUploadDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
-          <Button disabled={!csv || busy} onClick={submit}>{busy ? "Processing…" : "Upload & process"}</Button>
+          <LoadingButton disabled={!csv || busy} onClick={submit} loading={busy} loadingText="Processing…">{"Upload & process"}</LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

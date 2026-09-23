@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MoneyDisplay } from "@/components/shared/money-display"
 import { createTopUpRequestSchema, type CreateTopUpRequestInput } from "@/lib/validations/topup"
 import { createTopUpRequest } from "@/app/(portal)/funding-wallet/actions"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 export function TopupRequestForm({
   fundingAccounts,
@@ -132,9 +133,9 @@ export function TopupRequestForm({
                 <Button type="button" variant="outline" onClick={() => router.push("/funding-wallet")}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? "Submitting…" : "Submit for Approval"}
-                </Button>
+                <LoadingButton type="submit" disabled={form.formState.isSubmitting} loading={form.formState.isSubmitting} loadingText="Submitting…">
+                  {"Submit for Approval"}
+                </LoadingButton>
               </div>
             </form>
           </Form>

@@ -3,13 +3,15 @@
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import type { ColumnDef } from "@tanstack/react-table"
-import { DataTable } from "@/components/shared/data-table"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { MoneyDisplay } from "@/components/shared/money-display"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
 import { DateFilter, FilterBar, SearchFilter, SelectFilter } from "@/components/shared/filters"
 import { ExportButton } from "@/components/shared/export-button"
 import type { TransactionListRow } from "@/lib/data/transactions"
+import { RowActions } from "@/components/shared/row-actions"
+import { Eye } from "@/components/icons"
 
 const STATUSES = [
   "INITIATED", "TICKET_VALIDATED", "FUEL_AUTHORISATION_PENDING", "AUTHORISED", "FUELLING_IN_PROGRESS", "COMPLETED",
@@ -42,6 +44,7 @@ const columns: ColumnDef<TransactionListRow>[] = [
         "—"
       ),
   },
+  actionsColumn<TransactionListRow>((r) => <RowActions actions={[{ label: "View trace", icon: Eye, href: `/transactions/${r.id}` }]} />),
 ]
 
 export function TransactionsTable({

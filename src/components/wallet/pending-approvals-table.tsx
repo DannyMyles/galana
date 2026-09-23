@@ -4,13 +4,15 @@ import { useRouter } from "next/navigation"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 
-import { DataTable } from "@/components/shared/data-table"
+import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { ApprovalActionBar } from "@/components/shared/approval-action-bar"
 import { MoneyDisplay } from "@/components/shared/money-display"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
 import { StatusBadge } from "@/components/shared/status-badge"
 import type { TopUpRequestRow } from "@/lib/data/wallet"
 import { approveTopUpRequest, rejectTopUpRequest } from "@/app/(portal)/funding-wallet/actions"
+import { RowActions } from "@/components/shared/row-actions"
+import { Eye } from "@/components/icons"
 
 export function PendingApprovalsTable({
   rows,
@@ -72,6 +74,7 @@ export function PendingApprovalsTable({
           </span>
         ),
     },
+    actionsColumn<TopUpRequestRow>((r) => <RowActions actions={[{ label: "View request", icon: Eye, href: `/funding-wallet/${r.id}` }]} />),
   ]
 
   return (

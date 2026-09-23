@@ -3,12 +3,12 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { PortalSettings } from "@/lib/settings"
 import { saveSettings } from "@/app/(portal)/administration/settings/actions"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 const GROUPS: { title: string; note: string; fields: { key: keyof PortalSettings; label: string; unit: string; help: string }[] }[] = [
   {
@@ -74,7 +74,7 @@ export function SettingsForm({ initial }: { initial: PortalSettings }) {
           </CardContent>
         </Card>
       ))}
-      <div className="flex justify-end"><Button disabled={busy} onClick={submit}>{busy ? "Saving…" : "Save settings"}</Button></div>
+      <div className="flex justify-end"><LoadingButton disabled={busy} onClick={submit} loading={busy} loadingText="Saving…">{"Save settings"}</LoadingButton></div>
     </div>
   )
 }

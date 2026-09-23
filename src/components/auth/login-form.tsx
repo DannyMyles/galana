@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { signIn } from "next-auth/react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Form,
@@ -17,6 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { loginSchema, type LoginInput } from "@/lib/validations/auth"
+import { LoadingButton } from "@/components/shared/loading-button"
 
 const INPUT = "h-12 rounded-xl border-transparent bg-white text-[#0B0B33] placeholder:text-[#8B8EAA] shadow-sm"
 
@@ -100,9 +100,9 @@ export function LoginForm() {
           )}
         />
 
-        <Button type="submit" disabled={isSubmitting} className="h-12 w-full rounded-xl text-sm font-semibold tracking-wide uppercase shadow-lg shadow-[#EB2239]/30">
-          {isSubmitting ? "Signing in…" : "Sign In"}
-        </Button>
+        <LoadingButton type="submit" disabled={isSubmitting} className="h-12 w-full rounded-xl text-sm font-semibold tracking-wide uppercase shadow-lg shadow-[#EB2239]/30" loading={isSubmitting} loadingText="Signing in…">
+          {"Sign In"}
+        </LoadingButton>
 
         <p className="text-center text-xs text-white/75">
           Need help?{" "}

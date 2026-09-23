@@ -1,6 +1,4 @@
-import { Plus } from "@/components/icons"
 import { PageHeader } from "@/components/shared/page-header"
-import { Button } from "@/components/ui/button"
 import { BulkUploadDialog } from "@/components/shared/bulk-upload-dialog"
 import { StationsSubNav } from "@/components/stations/stations-subnav"
 import { StationsFilters } from "@/components/stations/stations-filters"
@@ -11,6 +9,7 @@ import { stationFiltersSchema } from "@/lib/validations/station"
 import { requirePermission } from "@/lib/rbac/guard"
 import { hasPermission } from "@/lib/rbac/roles"
 import { bulkUploadStations } from "@/app/(portal)/stations/actions"
+import { AddButton } from "@/components/shared/add-button"
 
 const TEMPLATE = `name,code,region,county,address,latitude,longitude,contactName,contactPhone,contactEmail,dealer,products
 Galana Karen,KR002,Nairobi,Nairobi,Ngong Road,-1.3,36.7,Jane Doe,+254700000001,karen@example.com,Galana Westlands Dealer Ltd,PMS;AGO
@@ -39,14 +38,14 @@ export default async function StationsPage({ searchParams }: { searchParams: Pro
                 template={TEMPLATE}
                 onUpload={bulkUploadStations}
               />
-              <StationFormDialog dealers={dealers} products={products} trigger={<Button />} triggerContent={<><Plus className="size-4" />Add station</>} />
+              <StationFormDialog dealers={dealers} products={products} trigger={<AddButton label="Add station" />} />
             </>
           ) : undefined
         }
       />
       <StationsSubNav />
       <StationsFilters regions={regions} />
-      <StationsTable rows={rows} totalRows={totalRows} pageSize={pageSize} dealers={dealers} products={products} />
+      <StationsTable rows={rows} totalRows={totalRows} pageSize={pageSize} dealers={dealers} products={products} canManage={canManage} />
     </div>
   )
 }

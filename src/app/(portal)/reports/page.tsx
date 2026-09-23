@@ -8,8 +8,8 @@ import {
   ArrowLeftRight,
   Clock,
   Ticket,
-  ShieldCheck,
 } from "@/components/icons"
+import Link from "next/link"
 import { auth } from "@/auth"
 import { getStationForUser } from "@/lib/data/pos"
 import { StatusBadge } from "@/components/shared/status-badge"
@@ -67,7 +67,8 @@ export default async function ReportsPage() {
         </TabsList>
 
         {finance && (
-          <TabsContent value="finance" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <TabsContent value="finance" className="flex flex-col gap-6">
+           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <KpiCard
               label="Total Jaguar Funding"
               value={<MoneyDisplay amount={finance.totalFunding} />}
@@ -98,6 +99,41 @@ export default async function ReportsPage() {
               icon={AlertTriangle}
               iconTint="emerald"
             />
+           </div>
+           <div className="grid gap-5 xl:grid-cols-3">
+              {[
+                { title: "Dealer settlements", rows: finance.settlementsByStatus, empty: "No settlements yet." },
+                { title: "Credit notes", rows: finance.creditNotesByStatus, empty: "No credit notes yet." },
+              ].map((block) => (
+                <Card key={block.title}>
+                  <CardHeader><CardTitle className="text-lg">{block.title}</CardTitle></CardHeader>
+                  <CardContent>
+                    {block.rows.length === 0 ? <p className="text-sm text-muted-foreground">{block.empty}</p> : (
+                      <ul className="flex flex-col gap-3 text-sm">
+                        {block.rows.map((r) => (
+                          <li key={r.status} className="flex items-center justify-between gap-3"><StatusBadge status={r.status} /><span>{r.count} · <MoneyDisplay amount={r.amount} decimals={0} /></span></li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Recent top-ups</CardTitle></CardHeader>
+                <CardContent>
+                  {finance.recentTopUps.length === 0 ? <p className="text-sm text-muted-foreground">No top-up requests yet.</p> : (
+                    <ul className="flex flex-col gap-3 text-sm">
+                      {finance.recentTopUps.map((t) => (
+                        <li key={t.id} className="flex items-center justify-between gap-3">
+                          <Link href={`/funding-wallet/${t.id}`} className="truncate font-medium text-[#1226AA] hover:underline">{t.reference}</Link>
+                          <span className="flex shrink-0 items-center gap-2"><MoneyDisplay amount={t.amount} decimals={0} /><StatusBadge status={t.status} /></span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+           </div>
           </TabsContent>
         )}
 
