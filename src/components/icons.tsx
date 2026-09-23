@@ -30,6 +30,7 @@ import {
   MoreHorizontalIcon,
   Notification03Icon,
   PrinterIcon,
+  QuoteUpIcon,
   RefreshIcon,
   Search01Icon,
   SecurityCheckIcon,
@@ -96,3 +97,4 @@ export const XIcon = X
 export const BarChart3 = make(ChartBarLineIcon)
 export const Bell = make(Notification03Icon)
 export const Settings = make(Settings02Icon)
+export const Quote = make(QuoteUpIcon)

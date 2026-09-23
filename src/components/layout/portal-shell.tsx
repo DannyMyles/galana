@@ -49,7 +49,7 @@ export function PortalShell({
       <SidebarNav roles={roles} collapsed={collapsed} onToggle={toggle} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar userName={userName} primaryRole={primaryRole} roles={roles} notifications={notifications} />
-        <main className="flex-1 p-6 lg:p-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 lg:px-5 lg:py-6">{children}</main>
       </div>
     </div>
   )

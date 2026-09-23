@@ -11,7 +11,15 @@ function greetingFor(date: Date) {
   return "Good evening"
 }
 
-export function DashboardHeader({ firstName, actions }: { firstName: string; actions?: ReactNode }) {
+export function DashboardHeader({
+  firstName,
+  actions,
+  quote,
+}: {
+  firstName: string
+  actions?: ReactNode
+  quote?: ReactNode
+}) {
   const [now, setNow] = useState<Date | null>(null)
 
   useEffect(() => {
@@ -34,17 +42,20 @@ export function DashboardHeader({ firstName, actions }: { firstName: string; act
           Here&apos;s what&apos;s happening with your fuel card solution today.
         </p>
       </div>
-      <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-        {actions}
-        <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-2.5 shadow-sm ring-1 ring-[#E6E8F3]">
-          <div className="flex size-10 items-center justify-center rounded-full bg-[#1226AA]/10 text-[#1226AA]">
-            <Clock className="size-5" />
-          </div>
-          <div className="min-w-[104px]">
-            <p className="text-lg leading-tight font-semibold tracking-tight tabular-nums text-[#0B0B33]">
-              {now ? format(now, "hh:mm:ss a") : "--:--:--"}
-            </p>
-            <p className="text-xs text-[#7B7E9C]">{now ? format(now, "EEE, d MMM yyyy") : " "}</p>
+      <div className="flex flex-col gap-3 lg:items-end">
+        {quote}
+        <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+          {actions}
+          <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-2.5 shadow-sm ring-1 ring-[#E6E8F3]">
+            <div className="flex size-10 items-center justify-center rounded-full bg-[#1226AA]/10 text-[#1226AA]">
+              <Clock className="size-5" />
+            </div>
+            <div className="min-w-[104px]">
+              <p className="text-lg leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-[#0B0B33]">
+                {now ? format(now, "hh:mm:ss a") : "--:--:--"}
+              </p>
+              <p className="text-xs whitespace-nowrap text-[#7B7E9C]">{now ? format(now, "EEE, d MMM yyyy") : " "}</p>
+            </div>
           </div>
         </div>
       </div>

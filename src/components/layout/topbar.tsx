@@ -63,7 +63,7 @@ export function Topbar({
   const settings = SETTINGS_LINKS.filter((link) => hasPermission(roles, link.permission))
 
   return (
-    <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between gap-4 border-b border-[#E6E8F3] bg-white/85 px-6 backdrop-blur-md lg:px-8">
+    <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between gap-4 border-b border-[#E6E8F3] bg-white/85 px-4 backdrop-blur-md lg:px-5">
       <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm">
         <span className="text-[#9A9DB8]">Galana</span>
         <span className="text-[#C4C6DA]">/</span>

@@ -36,7 +36,7 @@ export function KpiCard({
     : null
 
   return (
-    <Card className={cn("transition-shadow hover:shadow-md", className)}>
+    <Card className={cn("transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#1226AA]/10", className)}>
       <CardContent className="flex items-center gap-4">
         {Icon && (
           <div className={cn("flex size-11 shrink-0 items-center justify-center rounded-full", ICON_TINTS[iconTint])}>

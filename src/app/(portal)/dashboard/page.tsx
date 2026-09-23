@@ -6,6 +6,8 @@ import { KpiCard } from "@/components/shared/kpi-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ConsumptionTrendChart } from "@/components/dashboard/consumption-trend-chart"
+import { QuoteCard } from "@/components/dashboard/quote-card"
+import { getRandomQuote } from "@/lib/data/quote"
 import { StatusDonut } from "@/components/dashboard/status-donut"
 import { RecentTransactionsTable } from "@/components/dashboard/recent-transactions-table"
 import { MoneyDisplay, LitresDisplay } from "@/components/shared/money-display"
@@ -14,15 +16,16 @@ import { getFinanceDashboardData } from "@/lib/data/dashboard"
 
 export default async function DashboardPage() {
   const session = await auth()
-  const data = await getFinanceDashboardData()
+  const [data, quote] = await Promise.all([getFinanceDashboardData(), getRandomQuote()])
   const firstName = (session?.user?.name ?? "there").split(" ")[0]
   const canTopUp = session?.user ? hasPermission(session.user.roles, "wallet:topup:create") : false
   const maxLitres = Math.max(1, ...data.topStations.map((s) => s.litres))
 
   return (
-    <div className="mx-auto w-full max-w-[1500px]">
+    <div className="w-full">
       <DashboardHeader
         firstName={firstName}
+        quote={<QuoteCard quote={quote} />}
         actions={
           canTopUp ? (
             <Button render={<Link href="/funding-wallet/topup" />} nativeButton={false} className="h-12 rounded-xl px-5">

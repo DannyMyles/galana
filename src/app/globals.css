@@ -132,3 +132,10 @@
     font-weight: 600;
   }
 }
+html { scroll-behavior: smooth; }
+::selection { background: #1226AA; color: #fff; }
+* { scrollbar-width: thin; scrollbar-color: #C9CCE3 transparent; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
