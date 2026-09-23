@@ -68,10 +68,10 @@ export function TransactionsTable({
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by reference..."
-            className="pl-8"
+            className="pl-9"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             onKeyDown={(event) => event.key === "Enter" && updateParam("search", search || null)}

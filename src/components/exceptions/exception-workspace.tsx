@@ -58,10 +58,10 @@ export function ExceptionWorkspace({ items }: { items: ExceptionQueueRow[] }) {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Discrepancy Ledger</CardTitle>
           <div className="relative w-56">
-            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by ref/station..."
-              className="pl-8"
+              className="pl-9"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />

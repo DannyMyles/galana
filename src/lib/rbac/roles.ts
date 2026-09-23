@@ -74,6 +74,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "pos-devices:manage",
     "dealers:manage",
     "audit-log:view",
+    "wallet:view",
     "transactions:view-all",
     "settlements:manage",
     "reconciliation:manage",
