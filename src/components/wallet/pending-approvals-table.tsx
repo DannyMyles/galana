@@ -21,9 +21,9 @@ export function PendingApprovalsTable({
 }) {
   const router = useRouter()
 
-  async function handleApprove(id: string) {
+  async function handleApprove(id: string, comment: string) {
     try {
-      await approveTopUpRequest(id)
+      await approveTopUpRequest(id, comment)
       toast.success("Top-up approved and wallet balance updated.")
       router.refresh()
     } catch (error) {
@@ -49,6 +49,11 @@ export function PendingApprovalsTable({
       cell: ({ row }) => <MoneyDisplay amount={String(row.original.amount)} />,
     },
     { header: "Account", accessorKey: "fundingAccount" },
+    { header: "Requested by", cell: ({ row }) => row.original.maker.name },
+    {
+      header: "Remarks",
+      cell: ({ row }) => <span className="block max-w-[200px] truncate" title={row.original.remarks ?? ""}>{row.original.remarks || "—"}</span>,
+    },
     { header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
     {
       header: "Action",
@@ -56,7 +61,8 @@ export function PendingApprovalsTable({
         row.original.status === "PENDING_APPROVAL" ? (
           <ApprovalActionBar
             disabled={row.original.makerId === currentUserId}
-            onApprove={() => handleApprove(row.original.id)}
+            disabledReason="You created this request, so another checker must approve it."
+            onApprove={(comment) => handleApprove(row.original.id, comment)}
             onReject={(reason) => handleReject(row.original.id, reason)}
           />
         ) : (

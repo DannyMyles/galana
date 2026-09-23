@@ -41,7 +41,7 @@ export async function createTopUpRequest(input: CreateTopUpRequestInput) {
   revalidatePath("/funding-wallet/approvals")
 }
 
-export async function approveTopUpRequest(requestId: string) {
+export async function approveTopUpRequest(requestId: string, comment?: string) {
   const session = await auth()
   if (!session?.user || !hasPermission(session.user.roles, "wallet:topup:approve")) {
     throw new ActionError("You do not have permission to approve top-up requests.")
@@ -70,7 +70,7 @@ export async function approveTopUpRequest(requestId: string) {
   await prisma.$transaction(async (tx) => {
     await tx.walletTopUpRequest.update({
       where: { id: requestId },
-      data: { status: "APPROVED", checkerId: session.user.id, decidedAt: new Date() },
+      data: { status: "APPROVED", checkerId: session.user.id, decidedAt: new Date(), checkerComment: comment || null },
     })
 
     await tx.fuelWallet.update({

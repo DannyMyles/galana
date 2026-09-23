@@ -5,6 +5,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/db/client"
 import { writeAuditLog } from "@/lib/audit/log"
 import { hasPermission } from "@/lib/rbac/roles"
+import { canTransition, transitionTransaction } from "@/lib/transactions/state-machine"
 
 class ActionError extends Error {}
 
@@ -39,13 +40,10 @@ export async function resolveException(exceptionId: string, method: ResolutionMe
     const requiredAmount = Number(transaction.authorisedQtyL) * Number(transaction.unitTariff)
 
     if (wallet && Number(wallet.balance) >= requiredAmount) {
-      await prisma.$transaction([
-        prisma.transaction.update({ where: { id: transaction.id }, data: { status: "AUTHORISED", failureReason: null } }),
-        prisma.exceptionQueueItem.update({
-          where: { id: exceptionId },
-          data: { status: "RESOLVED", resolvedAt: new Date(), resolutionNotes: "Retried — balance now sufficient." },
-        }),
-      ])
+      await prisma.$transaction(async (tx) => {
+        if (canTransition(transaction.status, "AUTHORISED")) await transitionTransaction(tx, transaction.id, "AUTHORISED", { actorId: user.id, note: "Retried authorisation — balance now sufficient", data: { failureReason: null } })
+        await tx.exceptionQueueItem.update({ where: { id: exceptionId }, data: { status: "RESOLVED", resolvedAt: new Date(), resolutionNotes: "Retried — balance now sufficient." } })
+      })
     } else {
       await prisma.exceptionQueueItem.update({
         where: { id: exceptionId },
@@ -53,17 +51,10 @@ export async function resolveException(exceptionId: string, method: ResolutionMe
       })
     }
   } else if (method === "OVERRIDE" && transaction) {
-    await prisma.$transaction([
-      prisma.transaction.update({ where: { id: transaction.id }, data: { status: "AUTHORISED", failureReason: null } }),
-      prisma.exceptionQueueItem.update({
-        where: { id: exceptionId },
-        data: {
-          status: "RESOLVED",
-          resolvedAt: new Date(),
-          resolutionNotes: notes || "Overridden with admin approval.",
-        },
-      }),
-    ])
+    await prisma.$transaction(async (tx) => {
+      if (canTransition(transaction.status, "AUTHORISED")) await transitionTransaction(tx, transaction.id, "AUTHORISED", { actorId: user.id, note: "Overridden with admin approval", data: { failureReason: null } })
+      await tx.exceptionQueueItem.update({ where: { id: exceptionId }, data: { status: "RESOLVED", resolvedAt: new Date(), resolutionNotes: notes || "Overridden with admin approval." } })
+    })
   } else if (method === "NOTIFY") {
     await prisma.exceptionQueueItem.update({
       where: { id: exceptionId },

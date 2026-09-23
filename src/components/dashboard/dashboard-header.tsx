@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, type ReactNode } from "react"
-import { Clock } from "@/components/icons"
+import { LiveClock } from "@/components/dashboard/live-clock"
 import { format } from "date-fns"
 
 function greetingFor(date: Date) {
@@ -44,19 +44,9 @@ export function DashboardHeader({
         {actions && <div className="mt-4 flex flex-wrap items-center gap-3">{actions}</div>}
       </div>
 
-      <div className="flex w-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(18,38,170,0.07)] ring-1 ring-[#E6E8F3] sm:flex-row lg:w-[560px]">
+      <div className="flex w-full flex-col sm:flex-row lg:w-[600px]">
         {quote}
-        <div className="flex shrink-0 items-center gap-3 border-t border-[#E6E8F3] px-5 py-3.5 sm:border-t-0 sm:border-l">
-          <div className="flex size-10 items-center justify-center rounded-full bg-[#1226AA]/10 text-[#1226AA]">
-            <Clock className="size-5" />
-          </div>
-          <div>
-            <p className="text-lg leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-[#0B0B33]">
-              {now ? format(now, "hh:mm:ss a") : "--:--:--"}
-            </p>
-            <p className="text-xs whitespace-nowrap text-[#7B7E9C]">{now ? format(now, "EEE, d MMM yyyy") : "\u00a0"}</p>
-          </div>
-        </div>
+        <LiveClock now={now} />
       </div>
     </div>
   )

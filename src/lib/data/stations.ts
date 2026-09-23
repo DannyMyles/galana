@@ -20,7 +20,7 @@ export async function getStations(filters: StationFilters) {
   const [rows, totalRows, regions] = await Promise.all([
     prisma.station.findMany({
       where,
-      include: { dealer: true },
+      include: { dealer: true, products: { select: { productId: true, isActive: true, product: { select: { name: true } } } } },
       orderBy: { name: "asc" },
       skip: filters.page * PAGE_SIZE,
       take: PAGE_SIZE,

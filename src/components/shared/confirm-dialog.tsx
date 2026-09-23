@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 
 interface ConfirmDialogProps {
   trigger: ReactElement
+  triggerLabel?: string
   title: string
   description?: string
   confirmLabel?: string
@@ -32,6 +33,7 @@ interface ConfirmDialogProps {
  */
 export function ConfirmDialog({
   trigger,
+  triggerLabel,
   title,
   description,
   confirmLabel = "Confirm",
@@ -41,7 +43,7 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <AlertDialog>
-      <AlertDialogTrigger render={trigger} />
+      {triggerLabel ? <AlertDialogTrigger render={trigger}>{triggerLabel}</AlertDialogTrigger> : <AlertDialogTrigger render={trigger} />}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>

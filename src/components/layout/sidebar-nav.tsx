@@ -28,7 +28,7 @@ export function SidebarNav({
         collapsed ? "w-[76px]" : "w-64"
       )}
     >
-      <div className="flex h-full flex-col overflow-hidden border-r border-[#E6E8F3] bg-white">
+      <div className="flex h-full flex-col overflow-hidden bg-white shadow-[2px_0_24px_rgba(11,11,51,0.05)]">
         <div className={cn("flex shrink-0 items-center", collapsed ? "h-20 justify-center" : "h-28 px-7")}>
           {collapsed ? (
             <Image src="/logo-icon.png" alt="Galana Energies" width={40} height={36} className="h-9 w-auto" priority />

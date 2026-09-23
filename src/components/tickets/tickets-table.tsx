@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useState } from "react"
 import { Search } from "@/components/icons"
 import type { ColumnDef } from "@tanstack/react-table"
+import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DataTable } from "@/components/shared/data-table"
@@ -29,6 +30,20 @@ const columns: ColumnDef<TicketListRow>[] = [
   },
   { header: "Expires", cell: ({ row }) => <DateTimeDisplay value={row.original.expiresAt} /> },
   { header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+  {
+    header: "Latest fulfilment",
+    cell: ({ row }) => {
+      const t = row.original.transactions[0]
+      return t ? (
+        <div className="flex items-center gap-2">
+          <Link href={`/transactions/${t.id}`} className="font-semibold text-[#1226AA] hover:underline">{t.reference}</Link>
+          <StatusBadge status={t.status} />
+        </div>
+      ) : (
+        <span className="text-muted-foreground">Not redeemed</span>
+      )
+    },
+  },
 ]
 
 export function TicketsTable({

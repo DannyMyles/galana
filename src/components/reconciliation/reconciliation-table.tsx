@@ -1,88 +1,103 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { RefreshCw } from "@/components/icons"
-import type { ColumnDef } from "@tanstack/react-table"
-
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { DataTable } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
-import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import type { ReconciliationRow } from "@/lib/data/reconciliation"
 import { runReconciliationCheck, resolveReconciliationRecord } from "@/app/(portal)/reconciliation/actions"
 
-export function ReconciliationTable({ rows }: { rows: ReconciliationRow[] }) {
+interface Details { subject?: string; expected?: string; actual?: string }
+
+export function ReconciliationTable({ rows, canManage }: { rows: ReconciliationRow[]; canManage: boolean }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [isRunning, setIsRunning] = useState(false)
+  const [running, setRunning] = useState(false)
+  const [resolving, setResolving] = useState<ReconciliationRow | null>(null)
+  const [notes, setNotes] = useState("")
 
   async function handleRun() {
-    setIsRunning(true)
+    setRunning(true)
     try {
-      const result = await runReconciliationCheck()
-      toast.success(
-        `Checked ${result.checked} transactions — ${result.matched} matched, ${result.exceptions} exceptions.`
-      )
+      const r = await runReconciliationCheck()
+      toast.success(`Checked ${r.checked} items — ${r.matched} matched, ${r.exceptions} exceptions${r.ambiguous ? `, ${r.ambiguous} ambiguous transaction(s) queued` : ""}.`)
       startTransition(() => router.refresh())
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to run reconciliation.")
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Reconciliation failed.")
     } finally {
-      setIsRunning(false)
+      setRunning(false)
     }
   }
 
-  async function handleResolve(id: string) {
+  async function handleResolve() {
+    if (!resolving) return
     try {
-      await resolveReconciliationRecord(id, "Resolved from reconciliation workspace.")
-      toast.success("Marked as resolved.")
+      await resolveReconciliationRecord(resolving.id, notes)
+      toast.success("Exception resolved and recorded in the audit trail.")
+      setResolving(null)
+      setNotes("")
       router.refresh()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to resolve.")
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not resolve.")
     }
   }
+
+  const d = (row: ReconciliationRow) => (row.details ?? {}) as Details
 
   const columns: ColumnDef<ReconciliationRow>[] = [
-    { header: "Checked At", cell: ({ row }) => <DateTimeDisplay value={row.original.createdAt} /> },
-    { header: "Level", cell: ({ row }) => row.original.level },
-    { header: "Transaction Ref", cell: ({ row }) => row.original.transaction?.reference ?? "—" },
-    { header: "Station", cell: ({ row }) => row.original.transaction?.station.name ?? "—" },
+    { header: "Checked", cell: ({ row }) => <DateTimeDisplay value={row.original.createdAt} /> },
+    { header: "Level", cell: ({ row }) => row.original.level.charAt(0) + row.original.level.slice(1).toLowerCase() },
+    { header: "Subject", cell: ({ row }) => <span className="font-medium">{d(row.original).subject ?? row.original.transaction?.reference ?? "—"}</span> },
+    { header: "Expected", cell: ({ row }) => <span className="block max-w-[220px] truncate text-xs" title={d(row.original).expected}>{d(row.original).expected ?? "—"}</span> },
+    { header: "Found", cell: ({ row }) => <span className="block max-w-[220px] truncate text-xs" title={d(row.original).actual}>{d(row.original).actual ?? "—"}</span> },
     { header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
     {
-      header: "Action",
+      header: "Resolution",
       cell: ({ row }) =>
         row.original.status === "EXCEPTION" ? (
-          <ConfirmDialog
-            trigger={
-              <Button size="sm" variant="outline">
-                Mark Resolved
-              </Button>
-            }
-            title="Resolve this reconciliation exception?"
-            onConfirm={() => handleResolve(row.original.id)}
-          />
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        ),
+          canManage ? <Button size="sm" variant="outline" onClick={() => setResolving(row.original)}>Resolve</Button> : <span className="text-sm text-muted-foreground">Open</span>
+        ) : row.original.status === "RESOLVED" ? (
+          <span className="block max-w-[240px] truncate text-sm text-muted-foreground" title={row.original.resolutionNotes ?? ""}>{row.original.resolutionNotes}</span>
+        ) : <span className="text-sm text-muted-foreground">—</span>,
     },
   ]
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <Button onClick={handleRun} disabled={isRunning || isPending}>
-          <RefreshCw className="size-4" />
-          {isRunning ? "Running…" : "Run Reconciliation Check"}
-        </Button>
-      </div>
-      <DataTable
-        columns={columns}
-        data={rows}
-        emptyTitle="No reconciliation records yet"
-        emptyDescription="Run a reconciliation check to compare completed transactions against dealer settlements."
-      />
+      {canManage && (
+        <div className="mb-4 flex justify-end">
+          <Button onClick={handleRun} disabled={running || isPending}>
+            <RefreshCw className="size-4" />
+            {running ? "Running…" : "Run reconciliation"}
+          </Button>
+        </div>
+      )}
+      <DataTable columns={columns} data={rows} emptyTitle="Nothing reconciled yet" emptyDescription="Run a reconciliation to compare tickets, transactions and the financial ledger." />
+
+      <Dialog open={!!resolving} onOpenChange={(o) => !o && setResolving(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resolve exception</DialogTitle>
+            <DialogDescription>{resolving ? `${d(resolving).subject}: expected ${d(resolving).expected}, found ${d(resolving).actual}.` : ""}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="res-notes">How was it resolved?</Label>
+            <Textarea id="res-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Record the investigation and the corrective action" />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResolving(null)}>Cancel</Button>
+            <Button disabled={notes.trim().length < 5} onClick={handleResolve}>Mark resolved</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -13,6 +13,10 @@ import {
   UsersRound,
   ScrollText,
   ShieldCheck,
+  ReceiptText,
+  SlidersHorizontal,
+  Undo2,
+  Plug,
 } from "@/components/icons"
 import type { Permission } from "@/lib/rbac/roles"
 
@@ -49,12 +53,17 @@ export const PORTAL_NAV_GROUPS: PortalNavGroup[] = [
     items: [
       { label: "Validate Ticket", href: "/validate-ticket", icon: ShieldCheck, permission: "pos:validate-ticket" },
       { label: "Fuel Tickets", href: "/fuel-tickets", icon: Ticket, permission: "tickets:monitor" },
-      { label: "Transactions", href: "/transactions", icon: ArrowLeftRight, permission: "transactions:view-all" },
+      {
+        label: "Transactions",
+        href: "/transactions",
+        icon: ArrowLeftRight,
+        permission: ["transactions:view-all", "transactions:view-station"],
+      },
       {
         label: "Failed Transactions",
         href: "/failed-transactions",
         icon: AlertTriangle,
-        permission: ["transactions:view-station", "transactions:view-all", "exceptions:resolve"],
+        permission: ["transactions:view-station", "transactions:view-all", "exceptions:resolve", "exceptions:view"],
       },
       { label: "Stations", href: "/stations", icon: Fuel, permission: "stations:monitor" },
     ],
@@ -63,12 +72,15 @@ export const PORTAL_NAV_GROUPS: PortalNavGroup[] = [
     label: "Finance",
     items: [
       { label: "Funding & Wallet", href: "/funding-wallet", icon: Wallet, permission: "wallet:view" },
-      { label: "Settlements", href: "/settlements", icon: Landmark, permission: "settlements:manage" },
+      { label: "Settlements", href: "/settlements", icon: Landmark, permission: ["settlements:manage", "settlements:view", "reports:dealer"] },
+      { label: "Credit Notes", href: "/credit-notes", icon: ReceiptText, permission: ["credit-notes:manage", "credit-notes:approve", "credit-notes:view"] },
+      { label: "Adjustments", href: "/adjustments", icon: SlidersHorizontal, permission: ["adjustments:create", "adjustments:approve", "adjustments:view"] },
+      { label: "Reversals", href: "/reversals", icon: Undo2, permission: ["reversals:request", "reversals:approve", "reversals:view"] },
       {
         label: "Reconciliation",
         href: "/reconciliation",
         icon: GitCompareArrows,
-        permission: "reconciliation:manage",
+        permission: ["reconciliation:manage", "reconciliation:view"],
       },
     ],
   },
@@ -76,7 +88,12 @@ export const PORTAL_NAV_GROUPS: PortalNavGroup[] = [
     label: "Insights",
     items: [
       { label: "Customers", href: "/customers", icon: Users, permission: "reports:jaguar" },
-      { label: "Reports", href: "/reports", icon: BarChart3, permission: "reports:finance" },
+      {
+        label: "Reports",
+        href: "/reports",
+        icon: BarChart3,
+        permission: ["reports:finance", "reports:ops", "reports:jaguar", "reports:dealer"],
+      },
     ],
   },
   {
@@ -84,6 +101,8 @@ export const PORTAL_NAV_GROUPS: PortalNavGroup[] = [
     items: [
       { label: "Users", href: "/administration/users", icon: UsersRound, permission: "users:manage" },
       { label: "Audit Log", href: "/administration/audit-log", icon: ScrollText, permission: "audit-log:view" },
+      { label: "Integrations", href: "/administration/integrations", icon: Plug, permission: "integrations:view" },
+      { label: "Settings", href: "/administration/settings", icon: SlidersHorizontal, permission: "settings:manage" },
     ],
   },
 ]

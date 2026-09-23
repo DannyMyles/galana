@@ -49,9 +49,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.roles = (user as { roles: Role[] }).roles
+        return token
+      }
+      // US-ADM-003: deactivated users lose access immediately, not at token expiry.
+      if (token.sub) {
+        const current = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { status: true, roles: { select: { role: { select: { name: true } } } } },
+        })
+        if (!current || current.status !== "ACTIVE") return null
+        token.roles = current.roles.map((r) => r.role.name) as Role[]
       }
       return token
     },

@@ -41,6 +41,11 @@ export type PortalStatus =
   | "IN_PROGRESS"
   // Settlement
   | "SETTLED"
+  | "NOT_SYNCED"
+  | "SYNCED"
+  | "DECOMMISSIONED"
+  | "ONLINE"
+  | "OFFLINE"
 
 const STATUS_STYLES: Record<PortalStatus, string> = {
   INITIATED: "bg-slate-100 text-slate-600 border-transparent",
@@ -75,6 +80,11 @@ const STATUS_STYLES: Record<PortalStatus, string> = {
   IN_PROGRESS: "bg-[#F5C400]/20 text-[#8A6A00] border-transparent",
 
   SETTLED: "bg-[#0AC6A2]/15 text-[#068A70] border-transparent",
+  SYNCED: "bg-[#0AC6A2]/15 text-[#068A70] border-transparent",
+  NOT_SYNCED: "bg-slate-100 text-slate-500 border-transparent",
+  DECOMMISSIONED: "bg-slate-100 text-slate-500 border-transparent",
+  ONLINE: "bg-[#0AC6A2]/15 text-[#068A70] border-transparent",
+  OFFLINE: "bg-slate-100 text-slate-500 border-transparent",
 }
 
 function toLabel(status: string) {

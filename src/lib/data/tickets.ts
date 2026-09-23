@@ -28,7 +28,7 @@ export async function getTickets({
   const [rows, totalRows] = await Promise.all([
     prisma.ticket.findMany({
       where,
-      include: { customer: true, vehicle: true, product: true },
+      include: { customer: true, vehicle: true, product: true, transactions: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true, reference: true, status: true, failureReason: true } } },
       orderBy: { createdAt: "desc" },
       skip: page * PAGE_SIZE,
       take: PAGE_SIZE,

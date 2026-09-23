@@ -3,29 +3,22 @@
 import { useState } from "react"
 import { Check, X } from "@/components/icons"
 import { Button } from "@/components/ui/button"
-import { ConfirmDialog } from "@/components/shared/confirm-dialog"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
 interface ApprovalActionBarProps {
-  onApprove: () => void | Promise<void>
+  onApprove: (comment: string) => void | Promise<void>
   onReject: (reason: string) => void | Promise<void>
   approveLabel?: string
   rejectLabel?: string
   disabled?: boolean
+  disabledReason?: string
 }
 
 /**
- * Standard approve/reject controls for Maker-Checker flows (wallet top-ups,
- * credit notes, admin overrides). Rejection always requires a reason per
- * US-FC-003; approval goes through a lightweight confirm step.
+ * Maker-checker controls. Approval records an optional checker comment
+ * (US-FC-002); rejection always requires a reason (US-FC-003).
  */
 export function ApprovalActionBar({
   onApprove,
@@ -33,63 +26,57 @@ export function ApprovalActionBar({
   approveLabel = "Approve",
   rejectLabel = "Reject",
   disabled,
+  disabledReason,
 }: ApprovalActionBarProps) {
-  const [rejectOpen, setRejectOpen] = useState(false)
-  const [reason, setReason] = useState("")
+  const [mode, setMode] = useState<"approve" | "reject" | null>(null)
+  const [text, setText] = useState("")
+  const [busy, setBusy] = useState(false)
+
+  const close = () => {
+    setMode(null)
+    setText("")
+  }
+
+  async function submit() {
+    setBusy(true)
+    try {
+      if (mode === "approve") await onApprove(text.trim())
+      else await onReject(text.trim())
+      close()
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
-    <div className="flex items-center gap-2">
-      <ConfirmDialog
-        trigger={
-          <Button size="sm" variant="default" disabled={disabled}>
-            <Check className="size-4" />
-            {approveLabel}
-          </Button>
-        }
-        title="Approve this request?"
-        description="This action will be recorded against your account and cannot be undone."
-        confirmLabel={approveLabel}
-        onConfirm={onApprove}
-      />
-
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={disabled}
-        onClick={() => setRejectOpen(true)}
-      >
+    <div className="flex items-center gap-2" title={disabled ? disabledReason : undefined}>
+      <Button size="sm" disabled={disabled} onClick={() => setMode("approve")}>
+        <Check className="size-4" />
+        {approveLabel}
+      </Button>
+      <Button size="sm" variant="outline" disabled={disabled} onClick={() => setMode("reject")}>
         <X className="size-4" />
         {rejectLabel}
       </Button>
 
-      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
+      <Dialog open={mode !== null} onOpenChange={(open) => !open && close()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject request</DialogTitle>
+            <DialogTitle>{mode === "approve" ? approveLabel : rejectLabel} request</DialogTitle>
+            <DialogDescription>
+              {mode === "approve" ? "Your name, the time and any comment are recorded against this decision." : "A reason is required so the maker knows what to correct."}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
-            <Label htmlFor="reject-reason">Reason</Label>
-            <Textarea
-              id="reject-reason"
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder="Explain why this request is being rejected"
-            />
+            <Label htmlFor="decision-text">{mode === "approve" ? "Comment (optional)" : "Reason"}</Label>
+            <Textarea id="decision-text" value={text} onChange={(e) => setText(e.target.value)} placeholder={mode === "approve" ? "Add a note for the audit trail" : "Explain why this is being rejected"} />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectOpen(false)}>
+            <Button variant="outline" onClick={close}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              disabled={!reason.trim()}
-              onClick={async () => {
-                await onReject(reason.trim())
-                setReason("")
-                setRejectOpen(false)
-              }}
-            >
-              {rejectLabel}
+            <Button variant={mode === "reject" ? "destructive" : "default"} disabled={busy || (mode === "reject" && !text.trim())} onClick={submit}>
+              {busy ? "Saving…" : mode === "approve" ? approveLabel : rejectLabel}
             </Button>
           </DialogFooter>
         </DialogContent>

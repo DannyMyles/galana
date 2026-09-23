@@ -11,11 +11,14 @@ import { getRandomQuote } from "@/lib/data/quote"
 import { StatusDonut } from "@/components/dashboard/status-donut"
 import { RecentTransactionsTable } from "@/components/dashboard/recent-transactions-table"
 import { MoneyDisplay, LitresDisplay } from "@/components/shared/money-display"
+import { redirect } from "next/navigation"
 import { hasPermission } from "@/lib/rbac/roles"
+import { landingPath } from "@/lib/rbac/guard"
 import { getFinanceDashboardData } from "@/lib/data/dashboard"
 
 export default async function DashboardPage() {
   const session = await auth()
+  if (session?.user && !hasPermission(session.user.roles, "wallet:view")) redirect(landingPath(session.user.roles))
   const [data, quote] = await Promise.all([getFinanceDashboardData(), getRandomQuote()])
   const firstName = (session?.user?.name ?? "there").split(" ")[0]
   const canTopUp = session?.user ? hasPermission(session.user.roles, "wallet:topup:create") : false
@@ -36,8 +39,9 @@ export default async function DashboardPage() {
         }
       />
 
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 min-[1800px]:grid-cols-5">
         <KpiCard label="Fuel Wallet Balance" value={<MoneyDisplay amount={data.walletBalance} decimals={0} />} icon={Wallet} iconTint="blue" />
+        <KpiCard label="Total Top-ups" value={<MoneyDisplay amount={data.totalFunding} decimals={0} />} icon={Plus} iconTint="purple" />
         <KpiCard
           label="Total Consumption (MTD)"
           value={<LitresDisplay litres={data.monthConsumptionLitres} />}

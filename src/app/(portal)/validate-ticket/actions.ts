@@ -1,11 +1,14 @@
 "use server"
 
+import { randomInt } from "node:crypto"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/db/client"
 import { writeAuditLog } from "@/lib/audit/log"
 import { hasPermission } from "@/lib/rbac/roles"
 import { verifyPassword } from "@/lib/auth/password"
 import { getStationForUser, getCurrentEpraPrice } from "@/lib/data/pos"
+import { getSettings } from "@/lib/settings"
+import { recordInitialEvent, transitionTransaction } from "@/lib/transactions/state-machine"
 
 class ActionError extends Error {}
 
@@ -15,160 +18,197 @@ async function requireStationSession() {
     throw new ActionError("You do not have permission to validate tickets.")
   }
   const station = await getStationForUser(session.user.id)
-  if (!station) {
-    throw new ActionError("Your account is not linked to a station.")
-  }
+  if (!station) throw new ActionError("Your account is not linked to a station.")
   return { user: session.user, station }
 }
 
-export async function validateTicketByOtp(otp: string) {
+export interface ValidatedTicket {
+  ticketId: string
+  ticketNo: string
+  customerName: string
+  customerTier: string | null
+  vehicleRegNo: string | null
+  productId: string
+  productName: string
+  remainingQuantityL: number
+  expiresAt: string
+  unitTariff: number
+  stationName: string
+  stationId: string
+  maxQuantityL: number
+  maxValue: number
+  mode: "OTP" | "QR_CODE"
+}
+
+export type ValidationResult = { ok: true; ticket: ValidatedTicket } | { ok: false; reason: string }
+
+export async function validateTicket(mode: "OTP" | "QR_CODE", credential: string): Promise<ValidationResult> {
   const { user, station } = await requireStationSession()
+  const value = credential.trim()
+  if (!value) return { ok: false, reason: mode === "OTP" ? "Enter the OTP shown to the customer." : "No QR code was read." }
 
-  const candidates = await prisma.ticket.findMany({
-    where: {
-      status: { in: ["ISSUED", "PARTIALLY_REDEEMED"] },
-      expiresAt: { gt: new Date() },
-      otpHash: { not: null },
-    },
-    include: { customer: true, vehicle: true, product: true },
-  })
-
+  const include = { customer: true, vehicle: true, product: true } as const
   let matched = null
-  for (const ticket of candidates) {
-    if (ticket.otpHash && (await verifyPassword(otp, ticket.otpHash))) {
-      matched = ticket
-      break
+
+  if (mode === "QR_CODE") {
+    matched = await prisma.ticket.findUnique({ where: { qrCodeToken: value }, include })
+  } else {
+    const candidates = await prisma.ticket.findMany({ where: { otpHash: { not: null } }, include })
+    for (const ticket of candidates) {
+      if (ticket.otpHash && (await verifyPassword(value, ticket.otpHash))) {
+        matched = ticket
+        break
+      }
     }
   }
 
+  const audit = (result: "SUCCESS" | "FAILURE", reason?: string, entityId?: string) =>
+    writeAuditLog({
+      userId: user.id,
+      role: user.roles[0],
+      action: "TICKET_VALIDATION",
+      entityType: "Ticket",
+      entityId,
+      result,
+      failureReason: reason,
+    })
+
   if (!matched) {
-    await writeAuditLog({
-      userId: user.id,
-      role: user.roles[0],
-      action: "TICKET_VALIDATION",
-      entityType: "Ticket",
-      result: "FAILURE",
-      failureReason: "Invalid or expired OTP.",
-    })
-    throw new ActionError("Invalid or expired OTP.")
+    await audit("FAILURE", "Unknown or invalid credential.")
+    return { ok: false, reason: mode === "OTP" ? "Invalid OTP. Check the code and try again." : "This QR code is not recognised." }
   }
 
-  const stationServesProduct = station.products.some((sp) => sp.productId === matched.productId)
-  if (!stationServesProduct) {
-    await writeAuditLog({
-      userId: user.id,
-      role: user.roles[0],
-      action: "TICKET_VALIDATION",
-      entityType: "Ticket",
-      entityId: matched.id,
-      result: "FAILURE",
-      failureReason: `Station does not dispense ${matched.product.name}.`,
+  const reject = async (reason: string): Promise<ValidationResult> => {
+    await prisma.ticketValidation.create({
+      data: { ticketId: matched.id, mode, stationId: station.id, validatedBy: user.id, isValid: false, reason },
     })
-    throw new ActionError(`${station.name} does not dispense ${matched.product.name} for this ticket.`)
+    await audit("FAILURE", reason, matched.id)
+    return { ok: false, reason }
   }
 
+  if (station.status !== "ACTIVE") return reject(`${station.name} is ${station.status.toLowerCase()} and cannot fulfil tickets.`)
+  if (matched.status === "REDEEMED") return reject("This ticket has already been fully redeemed.")
+  if (matched.status === "CANCELLED") return reject("This ticket has been cancelled.")
+  if (matched.status === "EXPIRED" || matched.expiresAt <= new Date()) return reject("This ticket has expired.")
+  if (!station.products.some((sp) => sp.productId === matched.productId && sp.isActive)) {
+    return reject(`${station.name} is not authorised to dispense ${matched.product.name}.`)
+  }
   const price = await getCurrentEpraPrice(matched.productId)
-  if (!price) {
-    throw new ActionError(`No active EPRA price configured for ${matched.product.name}.`)
-  }
+  if (!price) return reject(`No active EPRA price is configured for ${matched.product.name}.`)
 
-  await writeAuditLog({
-    userId: user.id,
-    role: user.roles[0],
-    action: "TICKET_VALIDATION",
-    entityType: "Ticket",
-    entityId: matched.id,
-    result: "SUCCESS",
+  await prisma.ticketValidation.create({
+    data: { ticketId: matched.id, mode, stationId: station.id, validatedBy: user.id, isValid: true },
   })
+  await audit("SUCCESS", undefined, matched.id)
 
+  const settings = await getSettings()
   return {
-    ticketId: matched.id,
-    ticketNo: matched.ticketNo,
-    customerName: matched.customer.name,
-    customerTier: matched.customer.tier,
-    vehicleRegNo: matched.vehicle?.regNo ?? null,
-    productId: matched.productId,
-    productName: matched.product.name,
-    remainingQuantityL: Number(matched.remainingQuantityL),
-    expiresAt: matched.expiresAt.toISOString(),
-    unitTariff: Number(price.pricePerLitre),
-    stationName: station.name,
-    stationId: station.id,
+    ok: true,
+    ticket: {
+      ticketId: matched.id,
+      ticketNo: matched.ticketNo,
+      customerName: matched.customer.name,
+      customerTier: matched.customer.tier,
+      vehicleRegNo: matched.vehicle?.regNo ?? null,
+      productId: matched.productId,
+      productName: matched.product.name,
+      remainingQuantityL: Number(matched.remainingQuantityL),
+      expiresAt: matched.expiresAt.toISOString(),
+      unitTariff: Number(price.pricePerLitre),
+      stationName: station.name,
+      stationId: station.id,
+      maxQuantityL: settings.maxQuantityPerTxnL,
+      maxValue: settings.maxValuePerTxn,
+      mode,
+    },
   }
 }
 
-export async function authoriseTicket(ticketId: string, quantityL: number) {
+export type AuthoriseResult = { ok: true; transactionId: string; duplicate?: boolean } | { ok: false; reason: string }
+
+const OPEN_STATES = ["INITIATED", "TICKET_VALIDATED", "FUEL_AUTHORISATION_PENDING", "AUTHORISED", "FUELLING_IN_PROGRESS"] as const
+
+export async function authoriseTicket(ticketId: string, quantityL: number, idempotencyKey: string): Promise<AuthoriseResult> {
   const { user, station } = await requireStationSession()
 
-  const ticket = await prisma.ticket.findUniqueOrThrow({
-    where: { id: ticketId },
-    include: { product: true, customer: { include: { wallet: true } } },
+  // US-TXN-007 / US-POS-007: a retry with the same key, or a second attempt on a ticket that already has an open
+  // transaction, returns the existing one instead of creating a duplicate.
+  const existing = await prisma.transaction.findFirst({
+    where: { OR: [{ idempotencyKey }, { ticketId, status: { in: [...OPEN_STATES] } }] },
+    orderBy: { createdAt: "desc" },
   })
-
-  if (quantityL <= 0 || quantityL > Number(ticket.remainingQuantityL)) {
-    throw new ActionError("Quantity exceeds the ticket's authorised balance.")
+  if (existing) {
+    if (existing.status === "FAILED" || existing.status === "REJECTED") {
+      return { ok: false, reason: existing.failureReason ?? "This request was previously declined." }
+    }
+    return { ok: true, transactionId: existing.id, duplicate: true }
   }
 
-  const price = await getCurrentEpraPrice(ticket.productId)
-  if (!price) {
-    throw new ActionError(`No active EPRA price configured for ${ticket.product.name}.`)
-  }
+  const [ticket, settings] = await Promise.all([
+    prisma.ticket.findUniqueOrThrow({
+      where: { id: ticketId },
+      include: { product: true, customer: { include: { wallet: true } } },
+    }),
+    getSettings(),
+  ])
 
-  const wallet = ticket.customer.wallet
-  if (!wallet) {
-    throw new ActionError("This customer has no active fuel wallet.")
-  }
-
-  const totalAmount = quantityL * Number(price.pricePerLitre)
-  const reference = `TXN-${Math.floor(100000 + Math.random() * 900000)}`
-
-  if (Number(wallet.balance) < totalAmount) {
-    const failed = await prisma.transaction.create({
-      data: {
-        reference,
-        ticketId: ticket.id,
-        stationId: station.id,
-        status: "FAILED",
-        authorisedQtyL: quantityL,
-        unitTariff: price.pricePerLitre,
-        failureReason: "ERR_WALLET_INSUFFICIENT_FUNDS: Master allocation limit exceeded.",
-      },
-    })
-
-    await prisma.exceptionQueueItem.create({
-      data: {
-        transactionId: failed.id,
-        reason: "Insufficient Balance",
-        status: "OPEN",
-      },
-    })
-
+  const fail = async (reason: string): Promise<AuthoriseResult> => {
     await writeAuditLog({
       userId: user.id,
       role: user.roles[0],
       action: "TICKET_AUTHORISATION",
-      entityType: "Transaction",
-      entityId: failed.id,
+      entityType: "Ticket",
+      entityId: ticketId,
       result: "FAILURE",
-      failureReason: "Insufficient wallet balance.",
+      failureReason: reason,
     })
-
-    throw new ActionError(
-      `Insufficient wallet balance. Requested KES ${totalAmount.toLocaleString()}, available KES ${Number(
-        wallet.balance
-      ).toLocaleString()}.`
-    )
+    return { ok: false, reason }
   }
 
-  const transaction = await prisma.transaction.create({
-    data: {
-      reference,
-      ticketId: ticket.id,
-      stationId: station.id,
-      status: "AUTHORISED",
-      authorisedQtyL: quantityL,
-      unitTariff: price.pricePerLitre,
-    },
+  if (station.status !== "ACTIVE") return fail(`${station.name} is ${station.status.toLowerCase()} and cannot fulfil tickets.`)
+  if (!Number.isFinite(quantityL) || quantityL <= 0) return fail("Enter a quantity greater than zero.")
+  if (quantityL > Number(ticket.remainingQuantityL)) return fail("Quantity exceeds the ticket's remaining authorised balance.")
+  if (quantityL > settings.maxQuantityPerTxnL) return fail(`Quantity exceeds the per-transaction limit of ${settings.maxQuantityPerTxnL} L.`)
+
+  const price = await getCurrentEpraPrice(ticket.productId)
+  if (!price) return fail(`No active EPRA price is configured for ${ticket.product.name}.`)
+  const wallet = ticket.customer.wallet
+  if (!wallet) return fail("This customer has no active fuel wallet.")
+
+  const totalAmount = Math.round(quantityL * Number(price.pricePerLitre) * 100) / 100
+  if (totalAmount > settings.maxValuePerTxn) {
+    return fail(`Value KES ${totalAmount.toLocaleString()} exceeds the per-transaction limit of KES ${settings.maxValuePerTxn.toLocaleString()}.`)
+  }
+
+  const reference = `TXN-${randomInt(10_000_000, 99_999_999)}`
+  const device = await prisma.pOSDevice.findFirst({ where: { stationId: station.id, status: "ACTIVE" } })
+  const insufficient = Number(wallet.balance) < totalAmount
+
+  const transactionId = await prisma.$transaction(async (tx) => {
+    const created = await tx.transaction.create({
+      data: {
+        reference,
+        ticketId: ticket.id,
+        stationId: station.id,
+        posDeviceId: device?.id,
+        status: "INITIATED",
+        authorisedQtyL: quantityL,
+        unitTariff: price.pricePerLitre,
+        idempotencyKey,
+      },
+    })
+    await recordInitialEvent(tx, created.id, "INITIATED", user.id)
+    await transitionTransaction(tx, created.id, "TICKET_VALIDATED", { actorId: user.id, note: "Ticket validated" })
+    await transitionTransaction(tx, created.id, "FUEL_AUTHORISATION_PENDING", { actorId: user.id, note: "Checking wallet balance and limits" })
+
+    if (insufficient) {
+      const reason = "ERR_WALLET_INSUFFICIENT_FUNDS: Master allocation limit exceeded."
+      await transitionTransaction(tx, created.id, "FAILED", { actorId: user.id, note: reason, data: { failureReason: reason } })
+      await tx.exceptionQueueItem.create({ data: { transactionId: created.id, reason: "Insufficient Balance", status: "OPEN" } })
+    } else {
+      await transitionTransaction(tx, created.id, "AUTHORISED", { actorId: user.id, note: "Fuel authorised" })
+    }
+    return created.id
   })
 
   await writeAuditLog({
@@ -176,10 +216,17 @@ export async function authoriseTicket(ticketId: string, quantityL: number) {
     role: user.roles[0],
     action: "TICKET_AUTHORISATION",
     entityType: "Transaction",
-    entityId: transaction.id,
-    newValues: { authorisedQtyL: quantityL, unitTariff: Number(price.pricePerLitre) },
-    result: "SUCCESS",
+    entityId: transactionId,
+    newValues: { authorisedQtyL: quantityL, totalAmount },
+    result: insufficient ? "FAILURE" : "SUCCESS",
+    failureReason: insufficient ? "Insufficient wallet balance." : undefined,
   })
 
-  return { transactionId: transaction.id }
+  if (insufficient) {
+    return {
+      ok: false,
+      reason: `Insufficient wallet balance. Required KES ${totalAmount.toLocaleString()}, available KES ${Number(wallet.balance).toLocaleString()}.`,
+    }
+  }
+  return { ok: true, transactionId }
 }

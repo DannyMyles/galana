@@ -15,9 +15,10 @@ export async function getFinanceDashboardData() {
   const trendStart = new Date(now)
   trendStart.setDate(trendStart.getDate() - 29)
 
-  const [wallet, monthConsumption, completedCount, pendingReconciliationCount, recentTransactions, trendRows, statusGroups, stationGroups] =
+  const [wallet, totalFunding, monthConsumption, completedCount, pendingReconciliationCount, recentTransactions, trendRows, statusGroups, stationGroups] =
     await Promise.all([
       prisma.fuelWallet.findFirst({ orderBy: { updatedAt: "desc" } }),
+      prisma.prepaidReceipt.aggregate({ _sum: { grossAmount: true } }),
       prisma.transaction.aggregate({
         where: { status: "COMPLETED", completedAt: { gte: monthStart } },
         _sum: { dispensedQtyL: true },
@@ -65,6 +66,7 @@ export async function getFinanceDashboardData() {
 
   return {
     walletBalance: Number(wallet?.balance ?? 0),
+    totalFunding: Number(totalFunding._sum.grossAmount ?? 0),
     monthConsumptionLitres: Number(monthConsumption._sum.dispensedQtyL ?? 0),
     completedTransactionsCount: completedCount,
     pendingReconciliationCount,

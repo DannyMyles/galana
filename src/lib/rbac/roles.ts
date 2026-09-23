@@ -62,6 +62,20 @@ export const PERMISSIONS = [
   "reports:dealer",
 
   "audit:read-only",
+
+  "credit-notes:approve",
+  "credit-notes:view",
+  "adjustments:create",
+  "adjustments:approve",
+  "adjustments:view",
+  "reversals:request",
+  "reversals:approve",
+  "reversals:view",
+  "settlements:view",
+  "reconciliation:view",
+  "exceptions:view",
+  "settings:manage",
+  "integrations:view",
 ] as const
 
 export type Permission = (typeof PERMISSIONS)[number]
@@ -84,6 +98,14 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "reports:ops",
     "reports:jaguar",
     "reports:dealer",
+    "settings:manage",
+    "integrations:view",
+    "credit-notes:view",
+    "adjustments:view",
+    "reversals:view",
+    "settlements:view",
+    "reconciliation:view",
+    "exceptions:view",
   ],
   FINANCE_MAKER: [
     "wallet:topup:create",
@@ -94,6 +116,12 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "reconciliation:manage",
     "exceptions:resolve",
     "reports:finance",
+    "adjustments:create",
+    "adjustments:view",
+    "reversals:request",
+    "reversals:view",
+    "credit-notes:view",
+    "exceptions:view",
   ],
   FINANCE_CHECKER: [
     "wallet:topup:approve",
@@ -104,6 +132,13 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "reconciliation:manage",
     "exceptions:resolve",
     "reports:finance",
+    "credit-notes:approve",
+    "adjustments:approve",
+    "adjustments:view",
+    "reversals:approve",
+    "reversals:view",
+    "credit-notes:view",
+    "exceptions:view",
   ],
   OPS_FUEL_CARD: [
     "stations:manage",
@@ -113,6 +148,12 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "transactions:view-all",
     "exceptions:resolve",
     "reports:ops",
+    "credit-notes:view",
+    "reversals:view",
+    "reversals:request",
+    "settlements:view",
+    "reconciliation:view",
+    "exceptions:view",
   ],
   STATION_DEALER_MANAGER: [
     "pos:validate-ticket",
@@ -121,7 +162,15 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "reports:dealer",
   ],
   JAGUAR_CUSTOMER: ["reports:jaguar"],
-  INTERNAL_AUDITOR: ["audit:read-only", "audit-log:view", "transactions:view-all"],
+  INTERNAL_AUDITOR: ["audit:read-only", "audit-log:view", "transactions:view-all",
+    "credit-notes:view",
+    "adjustments:view",
+    "reversals:view",
+    "settlements:view",
+    "reconciliation:view",
+    "exceptions:view",
+    "integrations:view",
+  ],
 }
 
 export function roleHasPermission(role: Role, permission: Permission): boolean {

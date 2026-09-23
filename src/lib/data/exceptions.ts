@@ -1,15 +1,16 @@
 import { prisma } from "@/lib/db/client"
 import { toPlain } from "@/lib/serialize"
 
-export async function getExceptionStats() {
+export async function getExceptionStats(scopeStationId?: string) {
+  const scope = scopeStationId ? { transaction: { stationId: scopeStationId } } : {}
   const startOfToday = new Date()
   startOfToday.setHours(0, 0, 0, 0)
 
   const [open, inProgress, resolvedToday] = await Promise.all([
-    prisma.exceptionQueueItem.count({ where: { status: "OPEN" } }),
-    prisma.exceptionQueueItem.count({ where: { status: "IN_PROGRESS" } }),
+    prisma.exceptionQueueItem.count({ where: { status: "OPEN", ...scope } }),
+    prisma.exceptionQueueItem.count({ where: { status: "IN_PROGRESS", ...scope } }),
     prisma.exceptionQueueItem.findMany({
-      where: { status: "RESOLVED", resolvedAt: { gte: startOfToday } },
+      where: { status: "RESOLVED", resolvedAt: { gte: startOfToday }, ...scope },
       select: { createdAt: true, resolvedAt: true },
     }),
   ])
@@ -30,9 +31,12 @@ export async function getExceptionStats() {
   }
 }
 
-export async function getExceptionQueue() {
+export async function getExceptionQueue(view: "open" | "resolved" = "open", scopeStationId?: string) {
   const rows = await prisma.exceptionQueueItem.findMany({
-    where: { status: { in: ["OPEN", "IN_PROGRESS"] } },
+    where: {
+      status: view === "open" ? { in: ["OPEN", "IN_PROGRESS"] } : "RESOLVED",
+      ...(scopeStationId ? { transaction: { stationId: scopeStationId } } : {}),
+    },
     include: {
       transaction: {
         include: {

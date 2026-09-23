@@ -23,7 +23,7 @@ import { EmptyState } from "@/components/shared/empty-state"
 import type { ExceptionQueueRow } from "@/lib/data/exceptions"
 import { resolveException } from "@/app/(portal)/failed-transactions/actions"
 
-export function ExceptionWorkspace({ items }: { items: ExceptionQueueRow[] }) {
+export function ExceptionWorkspace({ items, canResolve }: { items: ExceptionQueueRow[]; canResolve: boolean }) {
   const router = useRouter()
   const [search, setSearch] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(items[0]?.id ?? null)
@@ -157,6 +157,8 @@ export function ExceptionWorkspace({ items }: { items: ExceptionQueueRow[] }) {
                 </div>
               </div>
 
+              {selected.resolutionNotes && <p className="rounded-xl bg-[#0AC6A2]/10 px-3 py-2 text-xs text-[#068A70]">{selected.resolutionNotes}</p>}
+              {canResolve && selected.status !== "RESOLVED" ? (
               <div className="flex flex-col gap-2 border-t pt-4">
                 <p className="text-xs font-medium text-muted-foreground">EXECUTE RESOLUTION</p>
                 <Button
@@ -191,6 +193,9 @@ export function ExceptionWorkspace({ items }: { items: ExceptionQueueRow[] }) {
                   {pendingAction === "RESOLVE" ? "Saving…" : "Mark as Resolved"}
                 </Button>
               </div>
+              ) : selected.status !== "RESOLVED" ? (
+                <p className="border-t pt-4 text-xs text-muted-foreground">Read-only — resolution is handled by Operations or Finance.</p>
+              ) : null}
             </div>
           )}
         </CardContent>

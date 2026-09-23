@@ -73,3 +73,23 @@ export async function setPosDeviceStatus(deviceId: string, status: POSStatus) {
 
   revalidatePath("/stations/pos-devices")
 }
+
+export async function addApprovedVersion(version: string, notes?: string) {
+  const user = await requirePosManager()
+  const v = version.trim()
+  if (!v) throw new ActionError("Enter a software version.")
+  try {
+    await prisma.approvedSoftwareVersion.create({ data: { version: v, notes: notes?.trim() || null } })
+  } catch {
+    throw new ActionError("That version is already approved.")
+  }
+  await writeAuditLog({ userId: user.id, role: user.roles[0], action: "SOFTWARE_VERSION_APPROVED", entityType: "ApprovedSoftwareVersion", newValues: { version: v }, result: "SUCCESS" })
+  revalidatePath("/stations/pos-devices")
+}
+
+export async function removeApprovedVersion(id: string) {
+  const user = await requirePosManager()
+  const removed = await prisma.approvedSoftwareVersion.delete({ where: { id } })
+  await writeAuditLog({ userId: user.id, role: user.roles[0], action: "SOFTWARE_VERSION_REVOKED", entityType: "ApprovedSoftwareVersion", entityId: id, oldValues: { version: removed.version }, result: "SUCCESS" })
+  revalidatePath("/stations/pos-devices")
+}

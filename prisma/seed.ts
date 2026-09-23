@@ -3,6 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import { PrismaClient } from "@prisma/client"
 import { hashPassword } from "../src/lib/auth/password"
 import { ROLES } from "../src/lib/rbac/roles"
+import { seedExtras } from "./seed-extra"
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
@@ -157,13 +158,15 @@ async function main() {
     },
   })
 
+  await seedExtras(prisma)
+
   console.log("\nDone.")
   console.log("-----------------------------------------------------")
   console.log("Login as any seeded user with password: Password123!")
   console.log("  admin@galana.co.ke, finance.maker@galana.co.ke,")
   console.log("  finance.checker@galana.co.ke, ops@galana.co.ke,")
   console.log("  station.manager@galana.co.ke, auditor@galana.co.ke")
-  console.log(`Validate ticket GTK-001234 at /validate-ticket with OTP: ${DEMO_OTP}`)
+  console.log(`Validate ticket GTK-001234 at /validate-ticket with OTP: ${DEMO_OTP} or QR code: QR-GTK-001234`)
   console.log("-----------------------------------------------------")
 }
 

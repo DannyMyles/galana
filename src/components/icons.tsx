@@ -31,6 +31,16 @@ import {
   Notification03Icon,
   PrinterIcon,
   QuoteUpIcon,
+  Invoice03Icon,
+  SlidersHorizontalIcon,
+  UndoIcon,
+  PlugSocketIcon,
+  Download04Icon,
+  Upload04Icon,
+  Edit02Icon,
+  Route01Icon,
+  Link01Icon,
+  QrCodeIcon,
   RefreshIcon,
   Search01Icon,
   SecurityCheckIcon,
@@ -98,3 +108,13 @@ export const BarChart3 = make(ChartBarLineIcon)
 export const Bell = make(Notification03Icon)
 export const Settings = make(Settings02Icon)
 export const Quote = make(QuoteUpIcon)
+export const ReceiptText = make(Invoice03Icon)
+export const SlidersHorizontal = make(SlidersHorizontalIcon)
+export const Undo2 = make(UndoIcon)
+export const Plug = make(PlugSocketIcon)
+export const Download = make(Download04Icon)
+export const Upload = make(Upload04Icon)
+export const Pencil = make(Edit02Icon)
+export const Route = make(Route01Icon)
+export const Link2 = make(Link01Icon)
+export const QrCode = make(QrCodeIcon)

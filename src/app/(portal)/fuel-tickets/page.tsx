@@ -1,3 +1,4 @@
+import { requirePermission } from "@/lib/rbac/guard"
 import { PageHeader } from "@/components/shared/page-header"
 import { TicketsTable } from "@/components/tickets/tickets-table"
 import { getTickets } from "@/lib/data/tickets"
@@ -8,6 +9,7 @@ export default async function FuelTicketsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
+  await requirePermission("tickets:monitor")
   const params = await searchParams
   const { rows, totalRows, pageSize } = await getTickets({
     search: typeof params.search === "string" ? params.search : undefined,

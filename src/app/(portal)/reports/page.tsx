@@ -11,6 +11,8 @@ import {
   ShieldCheck,
 } from "@/components/icons"
 import { auth } from "@/auth"
+import { getStationForUser } from "@/lib/data/pos"
+import { StatusBadge } from "@/components/shared/status-badge"
 import { hasPermission } from "@/lib/rbac/roles"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard } from "@/components/shared/kpi-card"
@@ -48,7 +50,7 @@ export default async function ReportsPage() {
     tabs.some((t) => t.key === "finance") ? getFinanceReport() : null,
     tabs.some((t) => t.key === "ops") ? getOpsReport() : null,
     tabs.some((t) => t.key === "jaguar") ? getJaguarReport() : null,
-    tabs.some((t) => t.key === "dealer") ? getDealerReport() : null,
+    tabs.some((t) => t.key === "dealer") ? getDealerReport(hasPermission(roles, ["settlements:manage", "settlements:view"]) ? undefined : (await getStationForUser(session!.user.id))?.id ?? "none") : null,
   ])
 
   return (
@@ -146,55 +148,73 @@ export default async function ReportsPage() {
         )}
 
         {jaguar && (
-          <TabsContent value="jaguar" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <KpiCard
-              label="Total Prepaid Balance"
-              value={<MoneyDisplay amount={jaguar.prepaidBalance} />}
-              icon={Wallet}
-              iconTint="blue"
-            />
-            <KpiCard
-              label="Total Consumption"
-              value={<LitresDisplay litres={jaguar.totalConsumptionLitres} />}
-              icon={Fuel}
-              iconTint="amber"
-            />
-            <KpiCard label="Active Tickets" value={jaguar.activeTickets.toString()} icon={Ticket} iconTint="purple" />
+          <TabsContent value="jaguar" className="flex flex-col gap-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <KpiCard label="Total Prepaid Balance" value={<MoneyDisplay amount={jaguar.prepaidBalance} decimals={0} />} icon={Wallet} iconTint="blue" />
+              <KpiCard label="Total Consumption" value={<LitresDisplay litres={jaguar.totalConsumptionLitres} />} icon={Fuel} iconTint="amber" />
+              <KpiCard label="Active Tickets" value={jaguar.activeTickets.toString()} icon={Ticket} iconTint="purple" />
+            </div>
+            <div className="grid gap-5 xl:grid-cols-3">
+              {[
+                { title: "By customer", rows: jaguar.byCustomer },
+                { title: "By vehicle", rows: jaguar.byVehicle },
+                { title: "By station", rows: jaguar.byStation },
+              ].map((block) => (
+                <Card key={block.title}>
+                  <CardHeader><CardTitle className="text-lg">Consumption {block.title.toLowerCase()}</CardTitle></CardHeader>
+                  <CardContent>
+                    {block.rows.length === 0 ? <p className="text-sm text-muted-foreground">No completed transactions yet.</p> : (
+                      <ul className="flex flex-col gap-3 text-sm">
+                        {block.rows.slice(0, 8).map((r) => (
+                          <li key={r.name} className="flex items-center justify-between gap-3 border-b border-[#EEF0F8] pb-2 last:border-0">
+                            <span className="truncate font-medium">{r.name}</span>
+                            <span className="shrink-0 text-right"><LitresDisplay litres={r.litres} /><span className="block text-xs text-muted-foreground"><MoneyDisplay amount={r.amount} decimals={0} /></span></span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </TabsContent>
         )}
 
         {dealer && (
-          <TabsContent value="dealer" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <KpiCard
-              label="Station Consumption"
-              value={<LitresDisplay litres={dealer.stationConsumptionLitres} />}
-              icon={Fuel}
-              iconTint="amber"
-            />
-            <KpiCard
-              label="Current Dealer Credits"
-              value={<MoneyDisplay amount={dealer.currentCredits} />}
-              icon={Landmark}
-              iconTint="blue"
-            />
-            <KpiCard
-              label="Transaction History"
-              value={dealer.transactionCount.toString()}
-              icon={ArrowLeftRight}
-              iconTint="purple"
-            />
-            <KpiCard
-              label="Failed Transactions"
-              value={dealer.failedTransactions.toString()}
-              icon={AlertTriangle}
-              iconTint="red"
-            />
-            <KpiCard
-              label="Settled Records"
-              value={dealer.settledCount.toString()}
-              icon={ShieldCheck}
-              iconTint="emerald"
-            />
+          <TabsContent value="dealer" className="flex flex-col gap-6">
+            <p className="text-sm text-muted-foreground">Showing: <span className="font-semibold text-foreground">{dealer.stationName}</span></p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <KpiCard label="Station Consumption" value={<LitresDisplay litres={dealer.stationConsumptionLitres} />} icon={Fuel} iconTint="amber" />
+              <KpiCard label="Current Dealer Credits" value={<MoneyDisplay amount={dealer.currentCredits} decimals={0} />} icon={Landmark} iconTint="blue" />
+              <KpiCard label="Transaction History" value={dealer.transactionCount.toString()} icon={ArrowLeftRight} iconTint="purple" />
+              <KpiCard label="Failed Transactions" value={dealer.failedTransactions.toString()} icon={AlertTriangle} iconTint="red" />
+            </div>
+            <div className="grid gap-5 xl:grid-cols-2">
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Settlement status</CardTitle></CardHeader>
+                <CardContent>
+                  {dealer.settlementStatus.length === 0 ? <p className="text-sm text-muted-foreground">No settlements yet.</p> : (
+                    <ul className="flex flex-col gap-3 text-sm">
+                      {dealer.settlementStatus.map((s) => (
+                        <li key={s.status} className="flex items-center justify-between gap-3"><StatusBadge status={s.status} /><span>{s.count} · <MoneyDisplay amount={s.amount} decimals={0} /></span></li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Recent failed transactions</CardTitle></CardHeader>
+                <CardContent>
+                  {dealer.recentFailures.length === 0 ? <p className="text-sm text-muted-foreground">No failures — nice.</p> : (
+                    <ul className="flex flex-col gap-3 text-sm">
+                      {dealer.recentFailures.map((f) => (
+                        <li key={f.id}><span className="font-semibold">{f.reference}</span><span className="block text-xs text-[#D01A2F]">{f.failureReason}</span></li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         )}
       </Tabs>

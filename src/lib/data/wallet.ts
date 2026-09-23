@@ -22,9 +22,20 @@ export async function getFundingAccountOptions() {
   return Array.from(accounts)
 }
 
-export async function getTopUpRequests(status?: "PENDING_APPROVAL" | "APPROVED" | "REJECTED") {
+export interface TopUpFilters {
+  status?: "PENDING_APPROVAL" | "APPROVED" | "REJECTED"
+  search?: string
+  makerId?: string
+}
+
+export async function getTopUpRequests(filters: TopUpFilters | TopUpFilters["status"] = {}) {
+  const f: TopUpFilters = typeof filters === "string" ? { status: filters } : filters
   const rows = await prisma.walletTopUpRequest.findMany({
-    where: status ? { status } : undefined,
+    where: {
+      ...(f.status ? { status: f.status } : {}),
+      ...(f.makerId ? { makerId: f.makerId } : {}),
+      ...(f.search ? { OR: [{ reference: { contains: f.search, mode: "insensitive" } }, { fundingAccount: { contains: f.search, mode: "insensitive" } }, { remarks: { contains: f.search, mode: "insensitive" } }] } : {}),
+    },
     include: { maker: true, checker: true },
     orderBy: { createdAt: "desc" },
   })

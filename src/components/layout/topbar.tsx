@@ -40,7 +40,7 @@ const SETTINGS_LINKS = [
 ]
 
 const iconButton =
-  "relative flex size-10 items-center justify-center rounded-full bg-white text-[#3B3E63] ring-1 ring-[#E6E8F3] transition-all hover:bg-[#F3F4FB] hover:text-[#1226AA] focus-visible:ring-2 focus-visible:ring-[#1226AA] outline-none"
+  "relative flex size-10 items-center justify-center rounded-full bg-white text-[#3B3E63] shadow-[0_1px_6px_rgba(11,11,51,0.08)] transition-all hover:bg-[#F3F4FB] hover:text-[#1226AA] focus-visible:ring-2 focus-visible:ring-[#1226AA] outline-none"
 
 export function Topbar({
   userName,
@@ -63,7 +63,7 @@ export function Topbar({
   const settings = SETTINGS_LINKS.filter((link) => hasPermission(roles, link.permission))
 
   return (
-    <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between gap-4 border-b border-[#E6E8F3] bg-white/85 px-4 backdrop-blur-md lg:px-5">
+    <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between gap-4 bg-white/90 px-4 shadow-[0_2px_20px_rgba(11,11,51,0.05)] backdrop-blur-md lg:px-5">
       <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm">
         <span className="text-[#9A9DB8]">Galana</span>
         <span className="text-[#C4C6DA]">/</span>
@@ -120,8 +120,6 @@ export function Topbar({
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-
-        <div className="mx-1 h-8 w-px bg-[#E6E8F3]" />
 
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-3 rounded-full py-1 pr-3 pl-1 transition-colors outline-none hover:bg-[#F3F4FB] focus-visible:ring-2 focus-visible:ring-[#1226AA]">

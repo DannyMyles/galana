@@ -1,3 +1,4 @@
+import { requirePermission } from "@/lib/rbac/guard"
 import { Wallet, Car, Ticket as TicketIcon } from "@/components/icons"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard } from "@/components/shared/kpi-card"
@@ -8,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getCustomerDetail } from "@/lib/data/customers"
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission(["reports:jaguar", "reports:finance"])
   const { id } = await params
   const customer = await getCustomerDetail(id)
 
