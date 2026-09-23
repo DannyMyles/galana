@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useState } from "react"
-import { Search } from "lucide-react"
+import { Search } from "@/components/icons"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"

@@ -9,7 +9,7 @@ import {
   Clock,
   Ticket,
   ShieldCheck,
-} from "lucide-react"
+} from "@/components/icons"
 import { auth } from "@/auth"
 import { hasPermission } from "@/lib/rbac/roles"
 import { PageHeader } from "@/components/shared/page-header"

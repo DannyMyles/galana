@@ -15,7 +15,7 @@ export async function getFinanceDashboardData() {
   const trendStart = new Date(now)
   trendStart.setDate(trendStart.getDate() - 29)
 
-  const [wallet, monthConsumption, completedCount, pendingReconciliationCount, recentTransactions, trendRows] =
+  const [wallet, monthConsumption, completedCount, pendingReconciliationCount, recentTransactions, trendRows, statusGroups, stationGroups] =
     await Promise.all([
       prisma.fuelWallet.findFirst({ orderBy: { updatedAt: "desc" } }),
       prisma.transaction.aggregate({
@@ -33,7 +33,21 @@ export async function getFinanceDashboardData() {
         where: { status: "COMPLETED", completedAt: { gte: trendStart } },
         select: { completedAt: true, dispensedQtyL: true },
       }),
+      prisma.transaction.groupBy({ by: ["status"], _count: { _all: true } }),
+      prisma.transaction.groupBy({
+        by: ["stationId"],
+        where: { status: "COMPLETED" },
+        _sum: { dispensedQtyL: true, totalAmount: true },
+        orderBy: { _sum: { dispensedQtyL: "desc" } },
+        take: 5,
+      }),
     ])
+
+  const stationNames = await prisma.station.findMany({
+    where: { id: { in: stationGroups.map((g) => g.stationId) } },
+    select: { id: true, name: true },
+  })
+  const nameById = new Map(stationNames.map((s) => [s.id, s.name]))
 
   const trendByDay = new Map<string, number>()
   for (const row of trendRows) {
@@ -55,6 +69,12 @@ export async function getFinanceDashboardData() {
     completedTransactionsCount: completedCount,
     pendingReconciliationCount,
     recentTransactions: toPlain(recentTransactions),
+    statusBreakdown: statusGroups.map((g) => ({ status: g.status as string, count: g._count._all })),
+    topStations: stationGroups.map((g) => ({
+      name: nameById.get(g.stationId) ?? "Unknown",
+      litres: Number(g._sum.dispensedQtyL ?? 0),
+      amount: Number(g._sum.totalAmount ?? 0),
+    })),
     consumptionTrend,
   }
 }

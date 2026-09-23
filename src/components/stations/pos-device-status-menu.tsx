@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal } from "@/components/icons"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"

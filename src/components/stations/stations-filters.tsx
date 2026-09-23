@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useState, useTransition } from "react"
-import { Search } from "lucide-react"
+import { Search } from "@/components/icons"
 import { Input } from "@/components/ui/input"
 import {
   Select,

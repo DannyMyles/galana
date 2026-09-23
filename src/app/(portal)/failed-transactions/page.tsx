@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, Clock, CheckCircle2 } from "@/components/icons"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard } from "@/components/shared/kpi-card"
 import { ExceptionWorkspace } from "@/components/exceptions/exception-workspace"

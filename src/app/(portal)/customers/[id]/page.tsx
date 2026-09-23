@@ -1,4 +1,4 @@
-import { Wallet, Car, Ticket as TicketIcon } from "lucide-react"
+import { Wallet, Car, Ticket as TicketIcon } from "@/components/icons"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard } from "@/components/shared/kpi-card"
 import { MoneyDisplay } from "@/components/shared/money-display"

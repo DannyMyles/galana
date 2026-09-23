@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Fuel } from "lucide-react"
+import { Fuel } from "@/components/icons"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

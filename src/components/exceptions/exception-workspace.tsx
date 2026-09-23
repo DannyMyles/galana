@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Search } from "lucide-react"
+import { Search } from "@/components/icons"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"

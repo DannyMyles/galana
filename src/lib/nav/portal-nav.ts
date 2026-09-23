@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react"
+import type { AppIcon } from "@/components/icons"
 import {
   LayoutDashboard,
   Ticket,
@@ -13,13 +13,13 @@ import {
   UsersRound,
   ScrollText,
   ShieldCheck,
-} from "lucide-react"
+} from "@/components/icons"
 import type { Permission } from "@/lib/rbac/roles"
 
 export interface PortalNavItem {
   label: string
   href: string
-  icon: LucideIcon
+  icon: AppIcon
   /** Visible if the user holds ANY of these permissions. */
   permission: Permission | Permission[]
 }
@@ -87,3 +87,6 @@ export const PORTAL_NAV_GROUPS: PortalNavGroup[] = [
     ],
   },
 ]
+
+/** Flat, single-level navigation (no section headings). */
+export const PORTAL_NAV: PortalNavItem[] = PORTAL_NAV_GROUPS.flatMap((group) => group.items)

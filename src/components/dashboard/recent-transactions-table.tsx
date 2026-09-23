@@ -41,6 +41,7 @@ const columns: ColumnDef<RecentTransactionRow>[] = [
 export function RecentTransactionsTable({ rows }: { rows: RecentTransactionRow[] }) {
   return (
     <DataTable
+      variant="plain"
       columns={columns}
       data={rows}
       emptyTitle="No transactions yet"

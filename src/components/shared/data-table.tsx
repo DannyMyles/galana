@@ -6,7 +6,7 @@ import {
   useReactTable,
   type ColumnDef,
 } from "@tanstack/react-table"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -17,6 +17,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { EmptyState } from "@/components/shared/empty-state"
+
+const CARD_ROW =
+  "border-0 hover:bg-transparent [&>td]:border-y [&>td]:border-[#EEF0F8] [&>td]:bg-white [&>td]:py-4 [&>td]:transition-colors [&>td:first-child]:rounded-l-2xl [&>td:first-child]:border-l [&>td:last-child]:rounded-r-2xl [&>td:last-child]:border-r hover:[&>td]:bg-[#FAFAFF]"
 
 interface ServerPagination {
   pageIndex: number
@@ -32,6 +35,7 @@ interface DataTableProps<TData, TValue> {
   emptyTitle?: string
   emptyDescription?: string
   pagination?: ServerPagination
+  variant?: "cards" | "plain"
 }
 
 /**
@@ -47,6 +51,7 @@ export function DataTable<TData, TValue>({
   emptyTitle = "No records found",
   emptyDescription,
   pagination,
+  variant = "cards",
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
@@ -61,11 +66,11 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.06]">
-        <Table>
+      <div className={variant === "plain" ? "overflow-hidden" : ""}>
+        <Table className={variant === "cards" ? "border-separate border-spacing-y-2.5" : undefined}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className={variant === "cards" ? "border-0 hover:bg-transparent" : undefined}>
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder
@@ -81,14 +86,14 @@ export function DataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
+              <TableRow className={variant === "cards" ? CARD_ROW : undefined}>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
                   Loading…
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className={variant === "cards" ? CARD_ROW : undefined}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -97,7 +102,7 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))
             ) : (
-              <TableRow>
+              <TableRow className={variant === "cards" ? CARD_ROW : undefined}>
                 <TableCell colSpan={columns.length} className="p-0">
                   <EmptyState title={emptyTitle} description={emptyDescription} />
                 </TableCell>

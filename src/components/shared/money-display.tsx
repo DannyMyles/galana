@@ -9,10 +9,12 @@ const KES_FORMATTER = new Intl.NumberFormat("en-KE", {
 export function MoneyDisplay({
   amount,
   currency = "KES",
+  decimals = 2,
   className,
 }: {
   amount: number | string
   currency?: "KES"
+  decimals?: number
   className?: string
 }) {
   const value = typeof amount === "string" ? Number(amount) : amount
@@ -20,7 +22,7 @@ export function MoneyDisplay({
 
   return (
     <span className={cn("tabular-nums", className)}>
-      {KES_FORMATTER.format(value)}
+      {decimals === 2 ? KES_FORMATTER.format(value) : value.toLocaleString("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: decimals, minimumFractionDigits: decimals })}
     </span>
   )
 }

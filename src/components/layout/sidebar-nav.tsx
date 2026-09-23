@@ -3,104 +3,89 @@
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LogOut } from "lucide-react"
-import { signOut } from "next-auth/react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowLeftDoubleIcon, ArrowRightDoubleIcon } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
-import { hasPermission, ROLE_LABELS, type Role } from "@/lib/rbac/roles"
-import { PORTAL_NAV_GROUPS } from "@/lib/nav/portal-nav"
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase()
-}
+import { hasPermission, type Role } from "@/lib/rbac/roles"
+import { PORTAL_NAV } from "@/lib/nav/portal-nav"
 
 export function SidebarNav({
   roles,
-  userName,
-  primaryRole,
-  onNavigate,
+  collapsed,
+  onToggle,
 }: {
   roles: Role[]
-  userName: string
-  primaryRole?: Role
-  onNavigate?: () => void
+  collapsed: boolean
+  onToggle: () => void
 }) {
   const pathname = usePathname()
-  const groups = PORTAL_NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => hasPermission(roles, item.permission)),
-  })).filter((group) => group.items.length > 0)
+  const items = PORTAL_NAV.filter((item) => hasPermission(roles, item.permission))
 
   return (
-    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex h-16 items-center px-6">
-        <div className="rounded-md bg-white px-3 py-1.5">
-          <Image src="/logo-full.png" alt="Galana Energies" width={140} height={46} className="h-7 w-auto" priority />
+    <aside
+      className={cn(
+        "sticky top-0 z-30 h-screen shrink-0 transition-[width] duration-200 ease-in-out",
+        collapsed ? "w-[76px]" : "w-64"
+      )}
+    >
+      <div className="flex h-full flex-col overflow-hidden border-r border-[#E6E8F3] bg-white">
+        <div className={cn("flex shrink-0 items-center", collapsed ? "h-20 justify-center" : "h-28 px-7")}>
+          {collapsed ? (
+            <Image src="/logo-icon.png" alt="Galana Energies" width={40} height={36} className="h-9 w-auto" priority />
+          ) : (
+            <Image
+              src="/galana-logo.jpeg"
+              alt="Galana Energies"
+              width={177}
+              height={162}
+              className="h-[76px] w-auto"
+              priority
+            />
+          )}
         </div>
+
+        <nav className={cn("flex flex-1 flex-col gap-1 overflow-y-auto py-2", collapsed ? "items-center px-3" : "px-4")}>
+          {items.map((item) => {
+            const isActive = pathname.startsWith(item.href)
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={collapsed ? item.label : undefined}
+                aria-label={item.label}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "group relative flex items-center text-[14px] font-medium transition-all duration-150",
+                  collapsed ? "size-11 justify-center rounded-xl" : "gap-3.5 rounded-xl px-3.5 py-3",
+                  isActive
+                    ? "bg-gradient-to-r from-[#1226AA]/[0.12] to-[#1226AA]/[0.03] text-[#1226AA]"
+                    : "text-[#5E6182] hover:bg-[#F3F4FB] hover:text-[#0B0B33]"
+                )}
+              >
+                {isActive && !collapsed && (
+                  <span className="absolute top-1/2 left-0 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-[#1226AA]" />
+                )}
+                <Icon className={cn("size-[22px] shrink-0 transition-transform", !isActive && "group-hover:scale-105")} />
+                {!collapsed && <span className="truncate">{item.label}</span>}
+              </Link>
+            )
+          })}
+        </nav>
+
+        {!collapsed && (
+          <p className="px-7 py-5 text-[11px] text-[#9A9DB8]">© {new Date().getFullYear()} Galana Energies</p>
+        )}
       </div>
 
-      <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
-        {groups.map((group) => (
-          <div key={group.label} className="mb-1 first:mt-0">
-            <p className="px-3 pt-4 pb-1.5 text-[11px] font-semibold tracking-wider text-sidebar-foreground/35 uppercase first:pt-1">
-              {group.label}
-            </p>
-            <div className="flex flex-col gap-0.5">
-              {group.items.map((item) => {
-                const isActive = pathname.startsWith(item.href)
-                const Icon = item.icon
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onNavigate}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150",
-                      isActive
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    )}
-                  >
-                    <Icon className="size-4 shrink-0" />
-                    {item.label}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        ))}
-      </nav>
-
-      <div className="border-t border-sidebar-border/60 p-3">
-        <div className="flex items-center gap-3 rounded-xl px-2 py-2">
-          <Avatar className="size-9 shrink-0">
-            <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">
-              {initials(userName)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{userName}</p>
-            {primaryRole && (
-              <p className="truncate text-xs text-sidebar-foreground/50">{ROLE_LABELS[primaryRole]}</p>
-            )}
-          </div>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="shrink-0 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            aria-label="Sign out"
-          >
-            <LogOut className="size-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        className="absolute top-1/2 -right-4 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#000037] shadow-lg ring-1 ring-black/10 transition-all hover:bg-[#EB2239] hover:text-white"
+      >
+        <HugeiconsIcon icon={collapsed ? ArrowRightDoubleIcon : ArrowLeftDoubleIcon} size={16} strokeWidth={2} />
+      </button>
+    </aside>
   )
 }

@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react"
+import { CheckCircle2, AlertTriangle, ShieldCheck } from "@/components/icons"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard } from "@/components/shared/kpi-card"
 import { ReconciliationTable } from "@/components/reconciliation/reconciliation-table"

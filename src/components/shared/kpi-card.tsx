@@ -1,21 +1,21 @@
-import type { LucideIcon } from "lucide-react"
+import type { AppIcon } from "@/components/icons"
 import type { ReactNode } from "react"
-import { ArrowDownRight, ArrowUpRight } from "lucide-react"
+import { ArrowDownRight, ArrowUpRight } from "@/components/icons"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 const ICON_TINTS = {
-  blue: "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400",
-  amber: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
-  emerald: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
-  red: "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400",
-  purple: "bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400",
+  blue: "bg-[#1226AA]/10 text-[#1226AA]",
+  amber: "bg-[#F5C400]/20 text-[#8A6A00]",
+  emerald: "bg-[#0AC6A2]/15 text-[#068A70]",
+  red: "bg-[#EB2239]/10 text-[#EB2239]",
+  purple: "bg-[#F75B8C]/15 text-[#C4275F]",
 } as const
 
 interface KpiCardProps {
   label: string
   value: ReactNode
-  icon?: LucideIcon
+  icon?: AppIcon
   iconTint?: keyof typeof ICON_TINTS
   trend?: { value: string; direction: "up" | "down"; positiveIsGood?: boolean }
   helperText?: string
@@ -44,13 +44,13 @@ export function KpiCard({
           </div>
         )}
         <div className="min-w-0">
-          <p className="truncate text-sm text-muted-foreground">{label}</p>
-          <div className="text-2xl font-semibold leading-tight">{value}</div>
+          <p className="text-[13px] leading-snug text-muted-foreground">{label}</p>
+          <div className="text-[22px] font-semibold leading-tight tracking-tight">{value}</div>
           {trend && (
             <p
               className={cn(
                 "mt-1 flex items-center gap-1 text-xs",
-                trendIsGood ? "text-emerald-600" : "text-red-600"
+                trendIsGood ? "text-[#068A70]" : "text-[#EB2239]"
               )}
             >
               {trend.direction === "up" ? (

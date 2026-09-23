@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal } from "@/components/icons"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -65,7 +65,7 @@ export function UserActionsMenu({ userId, status }: { userId: string; status: Us
           <p className="text-sm text-muted-foreground">
             Share this temporary password securely — it will not be shown again.
           </p>
-          <code className="rounded-md bg-muted px-3 py-2 text-sm font-mono">{tempPassword}</code>
+          <code className="rounded-md bg-muted px-3 py-2 text-sm font-semibold tracking-wider">{tempPassword}</code>
           <DialogFooter>
             <Button onClick={() => setTempPassword(null)}>Done</Button>
           </DialogFooter>

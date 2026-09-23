@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Camera, Printer, ShieldCheck } from "lucide-react"
+import { Camera, Printer, ShieldCheck } from "@/components/icons"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

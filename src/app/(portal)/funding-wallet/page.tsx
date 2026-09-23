@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Plus, Wallet, Clock, CheckCircle2 } from "lucide-react"
+import { Plus, Wallet, Clock, CheckCircle2 } from "@/components/icons"
 import { auth } from "@/auth"
 import { hasPermission } from "@/lib/rbac/roles"
 import { PageHeader } from "@/components/shared/page-header"

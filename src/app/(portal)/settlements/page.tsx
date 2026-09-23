@@ -1,4 +1,4 @@
-import { Landmark, ListChecks } from "lucide-react"
+import { Landmark, ListChecks } from "@/components/icons"
 import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard } from "@/components/shared/kpi-card"
 import { MoneyDisplay } from "@/components/shared/money-display"

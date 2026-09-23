@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus } from "lucide-react"
+import { Plus } from "@/components/icons"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -72,7 +72,7 @@ export function AddUserDialog() {
             <p className="text-sm text-muted-foreground">
               User created. Share this temporary password securely — it will not be shown again.
             </p>
-            <code className="rounded-md bg-muted px-3 py-2 text-sm font-mono">{tempPassword}</code>
+            <code className="rounded-md bg-muted px-3 py-2 text-sm font-semibold tracking-wider">{tempPassword}</code>
             <DialogFooter>
               <Button onClick={() => handleClose(false)}>Done</Button>
             </DialogFooter>
