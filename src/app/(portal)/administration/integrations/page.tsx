@@ -38,8 +38,7 @@ export default async function IntegrationsPage() {
               <table className="w-full text-sm">
                 <tbody>
                   {INTEGRATION_ENDPOINTS.filter((e) => e.system === system).map((e) => (
-                    <tr key={e.story + e.path} className="border-t border-[#EEF0F8] first:border-0">
-                      <td className="py-3 pr-4 text-xs font-medium whitespace-nowrap text-muted-foreground">{e.story}</td>
+                    <tr key={e.name + e.path} className="border-t border-[#EEF0F8] first:border-0">
                       <td className="py-3 pr-4 font-medium whitespace-nowrap">{e.name}</td>
                       <td className="py-3 pr-4 whitespace-nowrap"><code className="rounded-md bg-[#F1F2FA] px-2 py-0.5 text-xs">{e.method} {e.path}</code></td>
                       <td className="py-3 pr-4 text-muted-foreground">{e.purpose}</td>

@@ -12,7 +12,7 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
     <div>
       <PageHeader
         title="Reconciliation"
-        description="Jaguar's ticket records, read live from the fuel card service (US-REC-001). Matching POS and ledger records wait for the posting rules."
+        description="Jaguar's ticket records, read live from the fuel card service. Matching POS and ledger records wait for the posting rules."
       />
       <JaguarTicketFeed customer={jaguarFeed.customer} result={jaguarFeed.result} from={jaguarFeed.from} to={jaguarFeed.to} />
     </div>

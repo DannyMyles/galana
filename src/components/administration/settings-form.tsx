@@ -13,7 +13,7 @@ import { LoadingButton } from "@/components/shared/loading-button"
 const GROUPS: { title: string; note: string; fields: { key: keyof PortalSettings; label: string; unit: string; help: string }[] }[] = [
   {
     title: "Transaction limits",
-    note: "Enforced at authorisation on every redemption (US-TXN-006).",
+    note: "Enforced at authorisation on every redemption.",
     fields: [
       { key: "maxQuantityPerTxnL", label: "Max quantity per transaction", unit: "L", help: "Larger requests are declined at the station." },
       { key: "maxValuePerTxn", label: "Max value per transaction", unit: "KES", help: "Quantity × EPRA price may not exceed this." },
@@ -21,7 +21,7 @@ const GROUPS: { title: string; note: string; fields: { key: keyof PortalSettings
   },
   {
     title: "Discounts",
-    note: "Set by Galana Finance. Applied when a transaction completes to calculate settlements and Jaguar credit notes (US-FIN-002/003).",
+    note: "Set by Galana Finance. Applied when a transaction completes to calculate settlements and Jaguar credit notes.",
     fields: [
       { key: "underCanopyDiscountPerL", label: "Station under-canopy discount", unit: "KES/L", help: "Deducted from the dealer's net payable; raised as a credit note to Jaguar." },
       { key: "jaguarDiscountPerL", label: "Jaguar contractual discount", unit: "KES/L", help: "Raised as a credit note; the wallet is still loaded with the full prepaid amount." },
@@ -29,7 +29,7 @@ const GROUPS: { title: string; note: string; fields: { key: keyof PortalSettings
   },
   {
     title: "Reconciliation",
-    note: "Defines an ambiguous transaction for the reconciliation queue (US-TXN-012).",
+    note: "Defines an ambiguous transaction for the reconciliation queue.",
     fields: [{ key: "staleTransactionMinutes", label: "Stale transaction threshold", unit: "min", help: "Authorised or fuelling transactions with no progress for this long are queued for investigation." }],
   },
 ]

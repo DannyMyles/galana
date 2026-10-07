@@ -25,7 +25,7 @@ export default async function PosDevicesPage() {
       <StationsSubNav />
       <p className="mb-5 flex items-start gap-2 rounded-xl bg-[#1226AA]/[0.06] px-4 py-3 text-sm text-[#3B3E63]">
         <Plug className="mt-0.5 size-4 shrink-0 text-[#1226AA]" />
-        JPL issues and manages the POS terminals. Registration here is manual until the JPL device feed is connected (US-ADM-006); connectivity is derived from each device&apos;s last check-in.
+        JPL issues and manages the POS terminals. Registration here is manual until the JPL device feed is connected; connectivity is derived from each device&apos;s last check-in.
       </p>
       <PosDevicesTable devices={toPlain(devices)} approvedVersions={versions.map((v) => v.version)} canManage={canManage} />
     </div>
