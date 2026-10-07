@@ -6,16 +6,16 @@ import { KpiCard } from "@/components/shared/kpi-card"
 import { Plug, Building2, Cpu, Link2 } from "@/components/icons"
 import { INTEGRATION_ENDPOINTS } from "@/lib/integrations/registry"
 import { requirePermission } from "@/lib/rbac/guard"
-import { prisma } from "@/lib/db/client"
+import { listStations } from "@/lib/integrations/fuel-card-partner"
 
 export default async function IntegrationsPage() {
   await requirePermission("integrations:view")
-  const [pending, synced, failed, notSynced] = await Promise.all([
-    prisma.station.count({ where: { jplSyncStatus: "PENDING" } }),
-    prisma.station.count({ where: { jplSyncStatus: "SYNCED" } }),
-    prisma.station.count({ where: { jplSyncStatus: "FAILED" } }),
-    prisma.station.count({ where: { jplSyncStatus: "NOT_SYNCED" } }),
-  ])
+  const { rows: stations } = await listStations({ pageSize: 1000 })
+  const count = (status: string) => stations.filter((s) => s.jplSyncStatus === status).length
+  const pending = count("PENDING")
+  const synced = count("SYNCED")
+  const failed = count("FAILED")
+  const notSynced = count("NOT_SYNCED")
   const systems = ["Jaguar", "POS", "JPL OMC"] as const
 
   return (

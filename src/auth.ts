@@ -3,9 +3,8 @@ import Credentials from "next-auth/providers/credentials"
 import { z } from "zod"
 
 import { authConfig } from "@/lib/auth/config"
-import { prisma } from "@/lib/db/client"
-import { verifyPassword } from "@/lib/auth/password"
 import type { Role } from "@/lib/rbac/roles"
+import { portalLogin, portalProfile } from "@/lib/integrations/fuel-card-partner"
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -26,23 +25,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const { email, password } = parsed.data
 
-        const user = await prisma.user.findUnique({
-          where: { email },
-          include: { roles: { include: { role: true } } },
-        })
-
-        if (!user || user.status !== "ACTIVE" || !user.passwordHash) {
-          return null
+        // Password and portal roles are checked in Frappe. The session id is the user's email.
+        let profile
+        try {
+          profile = await portalLogin(email, password)
+        } catch (error) {
+          // A wrong password is refused by Frappe with 401. A failing service login is a configuration error.
+          // Checked by name and status, not instanceof: the classes can load twice in the server bundle.
+          const err = error as { name?: string; status?: number }
+          if (err.name === "FuelCardServiceAuthError") throw error
+          if (err.status === 401) return null
+          throw error
         }
-
-        const isValid = await verifyPassword(password, user.passwordHash)
-        if (!isValid) return null
+        if (!profile.enabled || profile.roles.length === 0) return null
 
         return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          roles: user.roles.map((userRole) => userRole.role.name) as Role[],
+          id: profile.user,
+          name: profile.full_name,
+          email: profile.user,
+          roles: profile.roles as Role[],
         }
       },
     }),
@@ -55,13 +56,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token
       }
       // US-ADM-003: deactivated users lose access immediately, not at token expiry.
-      if (token.sub) {
-        const current = await prisma.user.findUnique({
-          where: { id: token.sub },
-          select: { status: true, roles: { select: { role: { select: { name: true } } } } },
-        })
-        if (!current || current.status !== "ACTIVE") return null
-        token.roles = current.roles.map((r) => r.role.name) as Role[]
+      // Fails closed: if Frappe cannot confirm the user, the session ends.
+      if (token.email) {
+        try {
+          const profile = await portalProfile(token.email)
+          if (!profile.enabled || profile.roles.length === 0) return null
+          token.roles = profile.roles as Role[]
+        } catch {
+          return null
+        }
       }
       return token
     },

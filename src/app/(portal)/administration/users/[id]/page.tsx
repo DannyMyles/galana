@@ -5,16 +5,20 @@ import { EntityAudit } from "@/components/shared/entity-audit"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { UserFormDialog } from "@/components/administration/user-form-dialog"
 import { Button } from "@/components/ui/button"
-import { DateTimeDisplay } from "@/components/shared/date-time-display"
 import { getUserDetail } from "@/lib/data/details"
-import { prisma } from "@/lib/db/client"
+import { listStations } from "@/lib/integrations/fuel-card-partner"
 import { requirePermission } from "@/lib/rbac/guard"
 import { ROLE_LABELS, type Role } from "@/lib/rbac/roles"
+
+async function getStationOptions() {
+  const result = await listStations({ pageSize: 1000 })
+  return result.rows.map((s) => ({ id: s.id, name: s.name })).sort((a, b) => a.name.localeCompare(b.name))
+}
 
 export default async function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission("users:manage")
   const { id } = await params
-  const [u, stations] = await Promise.all([getUserDetail(id), prisma.station.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })])
+  const [u, stations] = await Promise.all([getUserDetail(id), getStationOptions()])
   return (
     <DetailPage
       backHref="/administration/users"
@@ -38,7 +42,6 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
             <DetailFields columns={1} items={[
               { label: "Phone", value: u.phone },
               { label: "Station", value: u.station ? <Link href={`/stations/${u.station.id}`} className="text-[#1226AA] hover:underline">{u.station.name}</Link> : null },
-              { label: "Member since", value: <DateTimeDisplay value={u.createdAt} formatStr="dd MMM yyyy" /> },
             ]} />
           </DetailSection>
           <DetailSection title="Roles">

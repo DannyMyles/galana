@@ -1,23 +1,53 @@
+import { auth } from "@/auth"
 import { PageHeader } from "@/components/shared/page-header"
-import { AdjustmentsView } from "@/components/adjustments/adjustments-view"
+import { MiniTable } from "@/components/shared/mini-table"
+import { StatusBadge, type PortalStatus } from "@/components/shared/status-badge"
+import { MoneyDisplay } from "@/components/shared/money-display"
+import { AdjustmentActions } from "@/components/adjustments/adjustment-actions"
+import { AdjustmentRequestForm } from "@/components/adjustments/adjustment-request-form"
 import { requirePermission } from "@/lib/rbac/guard"
-import { hasPermission } from "@/lib/rbac/roles"
-import { prisma } from "@/lib/db/client"
+import { listAdjustments, listGalanaCustomerNames, type AdjustmentRow } from "@/lib/integrations/fuel-card-partner"
 import { toPlain } from "@/lib/serialize"
 
-export default async function AdjustmentsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const user = await requirePermission(["adjustments:create", "adjustments:approve", "adjustments:view"])
-  const { status } = await searchParams
-  const rows = await prisma.manualAdjustment.findMany({
-    where: status ? { status: status as "APPROVED" } : undefined,
-    include: { maker: { select: { name: true } }, checker: { select: { name: true } } },
-    orderBy: { createdAt: "desc" },
-  })
+export const dynamic = "force-dynamic"
+
+const STATUS: Record<AdjustmentRow["status"], PortalStatus> = { "Pending Approval": "PENDING_APPROVAL", Approved: "APPROVED", Rejected: "REJECTED" }
+
+export default async function AdjustmentsPage() {
+  await requirePermission(["adjustments:view"])
+  const session = await auth()
+  const email = session!.user!.email as string
+  const roles = (session?.user?.roles ?? []) as string[]
+  const isMaker = roles.includes("FINANCE_MAKER") || roles.includes("SYSTEM_ADMIN")
+  const isChecker = roles.includes("FINANCE_CHECKER") || roles.includes("SYSTEM_ADMIN")
+  const rows = toPlain(await listAdjustments(email))
+  const customers = isMaker ? await listGalanaCustomerNames() : []
 
   return (
     <div>
-      <PageHeader title="Manual Adjustments" description="Every manual change to the fuel wallet, who requested it, who approved it and why (US-AUD-004)." />
-      <AdjustmentsView rows={toPlain(rows)} canCreate={hasPermission(user.roles, "adjustments:create")} canApprove={hasPermission(user.roles, "adjustments:approve")} currentUserId={user.id} />
+      <PageHeader title="Manual Adjustments" description="Wallet credits and debits, raised by a Finance Maker and decided by a Finance Checker. An approved credit adds to Jaguar's fuel wallet, and an approved debit takes from it." />
+      {isMaker && <div className="mb-6"><AdjustmentRequestForm customers={customers} /></div>}
+      <div className="rounded-xl border border-[#E4E7F2] bg-white p-4">
+        <MiniTable<AdjustmentRow>
+          rows={rows}
+          empty="No adjustments yet."
+          columns={[
+            { header: "Reason", cell: (r) => r.reason },
+            { header: "Customer", cell: (r) => r.customer },
+            { header: "Direction", cell: (r) => r.direction },
+            { header: "Amount", cell: (r) => <MoneyDisplay amount={r.amount} /> },
+            { header: "Requested by", cell: (r) => r.requestedBy },
+            { header: "Status", cell: (r) => <StatusBadge status={STATUS[r.status]} /> },
+            {
+              header: "Decision",
+              cell: (r) =>
+                isChecker && r.status === "Pending Approval" && r.requestedBy !== email ? <AdjustmentActions requestId={r.id} /> : (
+                  <span className="text-xs text-muted-foreground">{r.status === "Pending Approval" ? "Waiting for a checker" : r.decidedBy ?? "—"}</span>
+                ),
+            },
+          ]}
+        />
+      </div>
     </div>
   )
 }

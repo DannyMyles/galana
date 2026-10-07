@@ -1,67 +1,75 @@
-import Link from "next/link"
-import { Car, Users } from "@/components/icons"
-import { DetailPage, DetailSection, DetailStat } from "@/components/shared/detail"
+import { auth } from "@/auth"
+import { DetailPage, DetailSection, DetailFields, DetailStat } from "@/components/shared/detail"
 import { MiniTable } from "@/components/shared/mini-table"
-import { EntityAudit } from "@/components/shared/entity-audit"
 import { MoneyDisplay, LitresDisplay } from "@/components/shared/money-display"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
-import { getCustomerDetail } from "@/lib/data/customers"
+import { customerFor } from "@/lib/data/portal-reports"
 import { requirePermission } from "@/lib/rbac/guard"
+import { Users } from "@/components/icons"
+import { EntityAudit } from "@/components/shared/entity-audit"
+import { getFuelCardSummaryForCustomer } from "@/lib/data/jaguar-fuel-card"
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission(["reports:jaguar", "reports:finance"])
+  const session = await auth()
   const { id } = await params
-  const customer = await getCustomerDetail(id)
+  const name = decodeURIComponent(id)
+  const c = await customerFor(session!.user!.email as string, name)
+  const portal = await getFuelCardSummaryForCustomer(name)
 
   return (
     <DetailPage
       backHref="/customers"
       backLabel="Customers"
       icon={Users}
-      title={customer.name}
-      subtitle={customer.tier ?? undefined}
+      title={c.customer}
+      subtitle={c.accountType ? `${c.accountType} account` : "No fuel card account"}
+      badge={c.accountStatus ? <StatusBadge status={c.accountStatus === "Active" ? "ACTIVE" : "SUSPENDED"} /> : undefined}
       main={
         <>
           <div className="grid gap-4 sm:grid-cols-3">
-            <DetailStat label="Wallet balance" value={customer.wallet ? <MoneyDisplay amount={String(customer.wallet.balance)} /> : "—"} />
-            <DetailStat label="Vehicles" value={customer.vehicles.length} />
-            <DetailStat label="Recent tickets" value={customer.tickets.length} />
+            <DetailStat label={c.accountType === "Credit" ? "Available credit" : "Prepaid float"} value={<MoneyDisplay amount={c.float ?? c.available} />} />
+            <DetailStat label="Active tickets" value={c.activeTickets} />
+            <DetailStat label="Vehicles" value={c.vehicles} />
           </div>
-          <DetailSection title="Recent tickets">
+          <DetailSection title="Vehicles">
             <MiniTable
-              rows={customer.tickets}
-              empty="No tickets issued yet."
+              rows={c.vehicleList}
+              empty="No vehicles on this account."
               columns={[
-                { header: "Ticket", cell: (t) => <Link href={`/fuel-tickets/${t.id}`} className="font-semibold text-[#1226AA] hover:underline">{t.ticketNo}</Link> },
-                { header: "Product", cell: (t) => t.product.name },
-                { header: "Vehicle", cell: (t) => t.vehicle?.regNo ?? "—" },
-                { header: "Qty", cell: (t) => <LitresDisplay litres={String(t.authorisedQuantityL)} /> },
-                { header: "Expires", cell: (t) => <DateTimeDisplay value={t.expiresAt} /> },
-                { header: "Status", cell: (t) => <StatusBadge status={t.status} /> },
+                { header: "Vehicle", cell: (v) => <span className="font-semibold">{v.vehicle_number}</span> },
+                { header: "Fuel", cell: (v) => v.fuel_type ?? "—" },
+                { header: "Limit", cell: (v) => <span>{v.limit_type ?? "—"} · {v.limit_unit === "KES" ? <MoneyDisplay amount={v.limit_value} /> : <LitresDisplay litres={v.limit_value} />}</span> },
+                { header: "Approval", cell: (v) => <StatusBadge status={v.approval_status === "Approved" ? "APPROVED" : "PENDING"} /> },
               ]}
             />
           </DetailSection>
+          <DetailSection title="Recent tickets">
+            <MiniTable
+              rows={c.recentTickets}
+              empty="No tickets yet."
+              columns={[
+                { header: "Ticket", cell: (t) => <span className="font-semibold">{t.ticketReference}</span> },
+                { header: "Vehicle", cell: (t) => t.vehicle ?? "—" },
+                { header: "Authorised", cell: (t) => <MoneyDisplay amount={t.authorisedAmount} /> },
+                { header: "Status", cell: (t) => t.status },
+                { header: "Created", cell: (t) => <DateTimeDisplay value={t.createdOn} formatStr="dd MMM yyyy" /> },
+              ]}
+            />
+          </DetailSection>
+          <EntityAudit entityType="Customer" entityId={c.customer} />
         </>
       }
       aside={
-        <DetailSection title="Vehicles">
-          {customer.vehicles.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No vehicles registered.</p>
-          ) : (
-            <ul className="flex flex-col gap-2 text-sm">
-              {customer.vehicles.map((v) => (
-                <li key={v.id} className="flex items-center gap-2.5 rounded-xl bg-[#F6F7FB] px-3 py-2.5 font-medium">
-                  <Car className="size-4 text-[#6A6C8C]" />
-                  {v.regNo}
-                </li>
-              ))}
-            </ul>
-          )}
+        <DetailSection title="Account">
+          <DetailFields columns={1} items={[
+            { label: "Account type", value: c.accountType ?? "—" },
+            { label: "Account status", value: c.accountStatus ?? "—" },
+            { label: "Fuel card service", value: portal?.state === "ok" ? "Connected" : "Not connected" },
+          ]} />
         </DetailSection>
       }
-    >
-      <EntityAudit entityType="Customer" entityId={customer.id} />
-    </DetailPage>
+    />
   )
 }

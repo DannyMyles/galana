@@ -1,165 +1,53 @@
 "use client"
 
-import Link from "next/link"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { toast } from "sonner"
-
+import { requestTopUp } from "@/app/(portal)/funding-wallet/actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MoneyDisplay } from "@/components/shared/money-display"
-import { createTopUpRequestSchema, type CreateTopUpRequestInput } from "@/lib/validations/topup"
-import { createTopUpRequest } from "@/app/(portal)/funding-wallet/actions"
-import { LoadingButton } from "@/components/shared/loading-button"
 
-export function TopupRequestForm({
-  fundingAccounts,
-  walletBalance,
-}: {
-  fundingAccounts: string[]
-  walletBalance: number
-}) {
+export function TopUpRequestForm({ customers }: { customers: string[] }) {
   const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
-  const form = useForm({
-    resolver: zodResolver(createTopUpRequestSchema),
-    defaultValues: { fundingAccount: fundingAccounts[0] ?? "", amount: 0, reference: "", remarks: "" },
-  })
-
-  async function onSubmit(values: CreateTopUpRequestInput) {
-    try {
-      await createTopUpRequest(values)
-      toast.success("Top-up request submitted for approval.")
-      form.reset({ fundingAccount: fundingAccounts[0] ?? "", amount: 0, reference: "", remarks: "" })
-      router.push("/funding-wallet")
-      router.refresh()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to submit request.")
-    }
+  function submit(formData: FormData) {
+    setError(null)
+    startTransition(async () => {
+      try {
+        await requestTopUp({
+          customer: String(formData.get("customer") ?? ""),
+          amount: Number(formData.get("amount") ?? 0),
+          fundingAccount: String(formData.get("fundingAccount") ?? ""),
+          reference: String(formData.get("reference") ?? ""),
+          remarks: String(formData.get("remarks") ?? "") || undefined,
+        })
+        setDone(true)
+        router.refresh()
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not create the request.")
+      }
+    })
   }
 
-  return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>Request Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-              <FormField
-                control={form.control}
-                name="fundingAccount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Funding Account</FormLabel>
-                    <Select value={field.value} onValueChange={(v) => v && field.onChange(v)}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select funding account" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {fundingAccounts.map((account) => (
-                          <SelectItem key={account} value={account}>
-                            {account}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount (KES)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Enter amount"
-                        {...field}
-                        value={field.value as string}
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="reference"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reference</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Q2-2026 Top-up" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="remarks"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Remarks</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Optional remarks" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => router.push("/funding-wallet")}>
-                  Cancel
-                </Button>
-                <LoadingButton type="submit" disabled={form.formState.isSubmitting} loading={form.formState.isSubmitting} loadingText="Submitting…">
-                  {"Submit for Approval"}
-                </LoadingButton>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+  if (done) return <p className="rounded-xl bg-[#0AC6A2]/15 px-4 py-3 text-sm text-[#068A70]">Request submitted for approval. It has not been posted to the wallet.</p>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Current Wallet Balance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-semibold">
-            <MoneyDisplay amount={walletBalance} />
-          </p>
-          <Button
-            variant="link"
-            className="mt-2 h-auto p-0"
-            render={<Link href="/funding-wallet" />}
-            nativeButton={false}
-          >
-            View Funding History
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+  return (
+    <form action={submit} className="grid gap-4 rounded-xl border border-[#E4E7F2] bg-white p-5 sm:max-w-xl">
+      <label className="grid gap-1 text-sm">Customer
+        <select name="customer" required className="rounded-lg border border-[#E4E7F2] px-3 py-2">
+          {customers.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm">Amount (KES)<Input name="amount" type="number" min="1" step="0.01" required /></label>
+      <label className="grid gap-1 text-sm">Funding account<Input name="fundingAccount" required placeholder="e.g. KES 1234567890 (Jaguar)" /></label>
+      <label className="grid gap-1 text-sm">Reference<Input name="reference" required /></label>
+      <label className="grid gap-1 text-sm">Remarks<Input name="remarks" /></label>
+      {error && <p className="rounded-xl bg-[#EB2239]/10 px-4 py-2.5 text-sm text-[#D01A2F]">{error}</p>}
+      <div className="flex justify-end">
+        <Button type="submit" disabled={isPending}>{isPending ? "Submitting…" : "Submit for approval"}</Button>
+      </div>
+    </form>
   )
 }

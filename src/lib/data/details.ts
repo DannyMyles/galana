@@ -1,81 +1,92 @@
 import { notFound } from "next/navigation"
-import { prisma } from "@/lib/db/client"
 import { toPlain } from "@/lib/serialize"
+import { getPortalUser, getDealer, getPosDeviceRecord, getStation, getTicketStatus, listDealers, listFuelProducts, listPosDevices, listStations } from "@/lib/integrations/fuel-card-partner"
 
-async function orNotFound<T>(p: Promise<T | null>): Promise<T> {
-  const r = await p
-  if (!r) notFound()
-  return toPlain(r) as T
+/** Shape of transaction rows on these pages. Empty until transactions move to Frappe. */
+type PendingTransaction = { id: string; reference: string; status: string; totalAmount: number | null; createdAt: Date; ticket: { customer: { name: string } } }
+const noTransactions: PendingTransaction[] = []
+
+/** Station, its dealer, products and POS devices from Frappe. Transactions and users are pending the transaction migration. */
+export async function getStationDetail(id: string) {
+  const [station, dealers, products, devices] = await Promise.all([
+    getStation(id).catch(() => null),
+    listDealers(),
+    listFuelProducts(),
+    listPosDevices(),
+  ])
+  if (!station) notFound()
+  const dealer = station.dealer ? dealers.find((d) => d.id === station.dealer) : undefined
+  const productName = new Map(products.map((p) => [p.id, p.name]))
+  const posDevices = devices.filter((d) => d.station?.id === station.id)
+  return toPlain({
+    ...station,
+    dealer: dealer ? { id: dealer.id, name: dealer.name } : null,
+    products: station.productIds.map((id) => ({ productId: id, product: { id, name: productName.get(id) ?? id } })),
+    posDevices: posDevices.map((d) => ({ id: d.id, deviceId: d.deviceId, status: d.status, softwareVersion: d.softwareVersion })),
+    dealerId: station.dealer,
+    transactions: noTransactions,
+    _count: { transactions: 0, posDevices: posDevices.length, users: 0 },
+  })
 }
 
-export const getStationDetail = (id: string) =>
-  orNotFound(
-    prisma.station.findUnique({
-      where: { id },
-      include: {
-        dealer: true,
-        products: { include: { product: true } },
-        posDevices: true,
-        transactions: { orderBy: { createdAt: "desc" }, take: 6, include: { ticket: { include: { customer: true } } } },
-        _count: { select: { transactions: true, posDevices: true, users: true } },
-      },
-    })
-  )
-
-export const getDealerDetail = (id: string) =>
-  orNotFound(prisma.dealer.findUnique({ where: { id }, include: { stations: { include: { _count: { select: { posDevices: true } } } } } }))
+export async function getDealerDetail(id: string) {
+  const [dealer, stations, devices] = await Promise.all([
+    getDealer(id).catch(() => null),
+    listStations({ pageSize: 1000 }),
+    listPosDevices(),
+  ])
+  if (!dealer) notFound()
+  const own = stations.rows.filter((s) => s.dealer === dealer.id)
+  return toPlain({
+    ...dealer,
+    stations: own.map((s) => ({
+      ...s,
+      _count: { posDevices: devices.filter((d) => d.station?.id === s.id).length },
+    })),
+  })
+}
 
 export const getUserDetail = (id: string) =>
-  orNotFound(prisma.user.findUnique({ where: { id }, include: { roles: { include: { role: true } }, station: true } }))
+  getPortalUser(id).then((u) => toPlain(u)).catch(() => notFound())
 
-export const getTicketDetail = (id: string) =>
-  orNotFound(
-    prisma.ticket.findUnique({
-      where: { id },
-      include: {
-        customer: true,
-        vehicle: true,
-        product: true,
-        transactions: { orderBy: { createdAt: "desc" }, include: { station: true } },
-        validations: { orderBy: { createdAt: "desc" }, take: 10, include: { station: true } },
-      },
-    })
-  )
+/** One fuel ticket from the fuel card service (Frappe). Validation attempts are not recorded there yet. */
+export async function getTicketDetail(id: string) {
+  const info = await getTicketStatus(id).catch(() => null)
+  if (!info) notFound()
+  const galanaStatus: Record<string, string> = { Reserved: "ISSUED", Dispensing: "PARTIALLY_REDEEMED", Consumed: "REDEEMED", Expired: "EXPIRED", Refunded: "CANCELLED" }
+  return toPlain({
+    id: info.ticket_reference,
+    ticketNo: info.ticket_reference,
+    authorizationCode: info.authorization_code,
+    customer: { name: info.customer ?? "—" },
+    vehicle: info.vehicle ? { regNo: info.vehicle } : null,
+    status: galanaStatus[info.status] ?? "ISSUED",
+    authorisedAmount: info.authorised_amount,
+    remainingAmount: info.remaining_amount,
+    consumedAmount: info.consumed_amount,
+    dispensedLitres: info.dispensed_litres,
+    unitPrice: info.unit_price,
+    expiresAt: info.expires_on ? new Date(info.expires_on) : null,
+    station: info.station,
+    transactions: info.transaction_number
+      ? [{ id: info.transaction_number, reference: info.transaction_number, station: info.station, amount: info.consumed_amount, status: info.failure_reason ? "FAILED" : "COMPLETED", completedOn: info.completed_on }]
+      : [],
+  })
+}
 
-export const getSettlementDetail = (id: string) =>
-  orNotFound(
-    prisma.dealerSettlement.findUnique({
-      where: { id },
-      include: { station: { include: { dealer: true } }, transaction: { include: { ticket: { include: { customer: true, vehicle: true, product: true } } } }, creditNotes: true },
-    })
-  )
+export async function getPosDeviceDetail(id: string) {
+  const device = await getPosDeviceRecord(id).catch(() => null)
+  if (!device) notFound()
+  return toPlain({
+    id: device.id,
+    deviceId: device.deviceId,
+    make: device.make,
+    model: device.model,
+    softwareVersion: device.softwareVersion,
+    status: device.status,
+    lastSeenAt: device.lastSeenAt ? new Date(device.lastSeenAt) : null,
+    station: device.station ? { id: device.station.id, name: device.station.name, code: device.station.code } : null,
+    transactions: noTransactions,
+  })
+}
 
-export const getCreditNoteDetail = (id: string) =>
-  orNotFound(
-    prisma.creditNote.findUnique({
-      where: { id },
-      include: { customer: true, maker: { select: { name: true } }, checker: { select: { name: true } }, settlement: { include: { transaction: { select: { id: true, reference: true } }, station: { select: { name: true } } } } },
-    })
-  )
-
-export const getAdjustmentDetail = (id: string) =>
-  orNotFound(prisma.manualAdjustment.findUnique({ where: { id }, include: { wallet: { include: { customer: true } }, maker: { select: { name: true } }, checker: { select: { name: true } } } }))
-
-export const getReversalDetail = (id: string) =>
-  orNotFound(
-    prisma.transactionReversal.findUnique({
-      where: { id },
-      include: { transaction: { include: { station: true, ticket: { include: { customer: true } } } }, requestedBy: { select: { name: true } }, decidedBy: { select: { name: true } } },
-    })
-  )
-
-export const getTopUpDetail = (id: string) =>
-  orNotFound(
-    prisma.walletTopUpRequest.findUnique({
-      where: { id },
-      include: { wallet: { include: { customer: true } }, maker: { select: { name: true } }, checker: { select: { name: true } }, prepaidReceipt: true },
-    })
-  )
-
-export const getPosDeviceDetail = (id: string) =>
-  orNotFound(prisma.pOSDevice.findUnique({ where: { id }, include: { station: true, transactions: { orderBy: { createdAt: "desc" }, take: 8 } } }))

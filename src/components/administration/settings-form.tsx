@@ -21,10 +21,10 @@ const GROUPS: { title: string; note: string; fields: { key: keyof PortalSettings
   },
   {
     title: "Discounts",
-    note: "Applied when a transaction completes to calculate settlements and Jaguar credit notes (US-FIN-002/003).",
+    note: "Set by Galana Finance. Applied when a transaction completes to calculate settlements and Jaguar credit notes (US-FIN-002/003).",
     fields: [
-      { key: "underCanopyDiscountPct", label: "Station under-canopy discount", unit: "%", help: "Deducted from the dealer's net payable; raised as a credit note to Jaguar." },
-      { key: "jaguarDiscountPct", label: "Jaguar contractual discount", unit: "%", help: "Raised as a credit note; the wallet is still loaded with the full prepaid amount." },
+      { key: "underCanopyDiscountPerL", label: "Station under-canopy discount", unit: "KES/L", help: "Deducted from the dealer's net payable; raised as a credit note to Jaguar." },
+      { key: "jaguarDiscountPerL", label: "Jaguar contractual discount", unit: "KES/L", help: "Raised as a credit note; the wallet is still loaded with the full prepaid amount." },
     ],
   },
   {
@@ -34,7 +34,8 @@ const GROUPS: { title: string; note: string; fields: { key: keyof PortalSettings
   },
 ]
 
-export function SettingsForm({ initial }: { initial: PortalSettings }) {
+/** Galana Finance sees only the discount rates; full settings access is for System Administrators. */
+export function SettingsForm({ initial, fullAccess }: { initial: PortalSettings; fullAccess: boolean }) {
   const router = useRouter()
   const [values, setValues] = useState<Record<keyof PortalSettings, string>>(Object.fromEntries(Object.entries(initial).map(([k, v]) => [k, String(v)])) as Record<keyof PortalSettings, string>)
   const [busy, setBusy] = useState(false)
@@ -54,7 +55,7 @@ export function SettingsForm({ initial }: { initial: PortalSettings }) {
 
   return (
     <div className="flex flex-col gap-5">
-      {GROUPS.map((group) => (
+      {GROUPS.filter((group) => fullAccess || group.title === "Discounts").map((group) => (
         <Card key={group.title}>
           <CardHeader>
             <CardTitle className="text-lg">{group.title}</CardTitle>

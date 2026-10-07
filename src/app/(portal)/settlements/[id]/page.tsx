@@ -1,64 +1,56 @@
-import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Landmark } from "@/components/icons"
+import Link from "next/link"
 import { DetailPage, DetailSection, DetailFields, DetailStat } from "@/components/shared/detail"
-import { MiniTable } from "@/components/shared/mini-table"
-import { EntityAudit } from "@/components/shared/entity-audit"
 import { StatusBadge } from "@/components/shared/status-badge"
-import { MoneyDisplay } from "@/components/shared/money-display"
-import { DateTimeDisplay } from "@/components/shared/date-time-display"
-import { getSettlementDetail } from "@/lib/data/details"
-import { getStationForUser } from "@/lib/data/pos"
+import { MoneyDisplay, LitresDisplay } from "@/components/shared/money-display"
+import { EntityAudit } from "@/components/shared/entity-audit"
 import { requirePermission } from "@/lib/rbac/guard"
-import { hasPermission } from "@/lib/rbac/roles"
+import { getSettlement } from "@/lib/integrations/fuel-card-partner"
+import { toPlain } from "@/lib/serialize"
+import { Landmark } from "@/components/icons"
+
+export const dynamic = "force-dynamic"
 
 export default async function SettlementDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requirePermission(["settlements:manage", "settlements:view", "reports:dealer"])
+  await requirePermission(["settlements:view", "settlements:manage"])
   const { id } = await params
-  const s = await getSettlementDetail(id)
-  if (!hasPermission(user.roles, ["settlements:manage", "settlements:view"])) {
-    const own = await getStationForUser(user.id)
-    if (own?.id !== s.stationId) notFound()
-  }
-  const t = s.transaction
+  const s = toPlain(await getSettlement(id).catch(() => null))
+  if (!s) notFound()
   return (
     <DetailPage
       backHref="/settlements"
-      backLabel="Settlements"
+      backLabel="Dealer Settlements"
       icon={Landmark}
-      title={`Settlement · ${t.reference}`}
-      subtitle={`${s.station.name}${s.station.dealer ? ` · ${s.station.dealer.name}` : ""}`}
-      badge={<StatusBadge status={s.status} />}
+      title={s.reference}
+      subtitle={`${s.station}${s.vehicle ? ` · ${s.vehicle}` : ""} · ${s.date}`}
+      badge={<StatusBadge status="PENDING" />}
       main={
         <>
           <div className="grid gap-4 sm:grid-cols-3">
-            <DetailStat label="Gross" value={<MoneyDisplay amount={Number(s.grossAmount)} />} />
-            <DetailStat label="Discounts" value={<MoneyDisplay amount={Number(s.underCanopyDiscount) + Number(s.jaguarContractualDiscount)} />} />
-            <DetailStat label="Net payable" value={<MoneyDisplay amount={Number(s.netPayableToDealer)} />} />
+            <DetailStat label="Litres" value={<LitresDisplay litres={s.litres} />} />
+            <DetailStat label="Gross" value={<MoneyDisplay amount={s.gross} />} />
+            <DetailStat label="Net to dealer" value={<MoneyDisplay amount={s.netPayableToDealer} />} />
           </div>
-          <DetailSection title="Linked credit notes">
-            <MiniTable
-              rows={s.creditNotes}
-              empty="No credit notes are linked to this settlement."
-              columns={[
-                { header: "Note", cell: (c) => <Link href={`/credit-notes/${c.id}`} className="font-semibold text-[#1226AA] hover:underline">{c.reference ?? c.id.slice(-6).toUpperCase()}</Link> },
-                { header: "Type", cell: (c) => c.type.replace(/_/g, " ").toLowerCase() },
-                { header: "Amount", cell: (c) => <MoneyDisplay amount={Number(c.amount)} /> },
-                { header: "Status", cell: (c) => <StatusBadge status={c.status} /> },
-              ]}
-            />
+          <DetailSection title="Credit notes" description="Raised to Jaguar from this settlement. Nothing is posted.">
+            <DetailFields columns={1} items={s.creditNotes.map((cn) => ({
+              label: cn.type === "UNDER_CANOPY" ? "Under-canopy" : "Jaguar contractual",
+              value: (
+                <Link href={`/credit-notes/${encodeURIComponent(`${s.id}:${cn.type}`)}`} className="font-medium text-[#1226AA] hover:underline">
+                  <MoneyDisplay amount={cn.amount} />
+                </Link>
+              ),
+            }))} />
           </DetailSection>
-          <EntityAudit entityType="DealerSettlement" entityId={s.id} />
+          <EntityAudit entityType="Ticket" entityId={s.id} />
         </>
       }
       aside={
-        <DetailSection title="Source transaction">
+        <DetailSection title="Settlement">
           <DetailFields columns={1} items={[
-            { label: "Transaction", value: <Link href={`/transactions/${t.id}`} className="text-[#1226AA] hover:underline">{t.reference}</Link> },
-            { label: "Customer", value: t.ticket.customer.name },
-            { label: "Vehicle", value: t.ticket.vehicle?.regNo },
-            { label: "Product", value: t.ticket.product.name },
-            { label: "Created", value: <DateTimeDisplay value={s.createdAt} /> },
+            { label: "Station", value: s.station },
+            { label: "Vehicle", value: s.vehicle ?? "—" },
+            { label: "Under-canopy discount (deducted)", value: <MoneyDisplay amount={s.underCanopyDiscount} /> },
+            { label: "Jaguar discount (credit note only)", value: <MoneyDisplay amount={s.jaguarDiscount} /> },
           ]} />
         </DetailSection>
       }

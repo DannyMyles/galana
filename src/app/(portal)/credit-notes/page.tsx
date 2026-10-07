@@ -1,49 +1,52 @@
-import { CheckCircle2, Clock, ReceiptText } from "@/components/icons"
+import Link from "next/link"
+import { AlertTriangle as AlertIcon } from "@/components/icons"
 import { PageHeader } from "@/components/shared/page-header"
-import { KpiCard } from "@/components/shared/kpi-card"
+import { MiniTable } from "@/components/shared/mini-table"
 import { MoneyDisplay } from "@/components/shared/money-display"
-import { CreditNotesView } from "@/components/credit-notes/credit-notes-view"
+import { StatusBadge } from "@/components/shared/status-badge"
+import { KpiCard } from "@/components/shared/kpi-card"
 import { requirePermission } from "@/lib/rbac/guard"
-import { hasPermission } from "@/lib/rbac/roles"
-import { prisma } from "@/lib/db/client"
+import { listCreditNotes, type CreditNoteLine } from "@/lib/integrations/fuel-card-partner"
 import { toPlain } from "@/lib/serialize"
 
-export default async function CreditNotesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const user = await requirePermission(["credit-notes:manage", "credit-notes:approve", "credit-notes:view"])
-  const { status, type, search } = await searchParams
+export const dynamic = "force-dynamic"
 
-  const [rows, sums, settlements] = await Promise.all([
-    prisma.creditNote.findMany({
-      where: {
-        ...(status ? { status: status as "PENDING" } : {}),
-        ...(type ? { type: type as "MANUAL" } : {}),
-        ...(search ? { OR: [{ reason: { contains: search, mode: "insensitive" } }, { reference: { contains: search, mode: "insensitive" } }] } : {}),
-      },
-      include: { maker: { select: { name: true } }, checker: { select: { name: true } }, settlement: { select: { transaction: { select: { id: true, reference: true } } } } },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-    }),
-    prisma.creditNote.groupBy({ by: ["status"], _sum: { amount: true }, _count: { _all: true } }),
-    prisma.dealerSettlement.findMany({ include: { transaction: { select: { reference: true } }, station: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 50 }),
-  ])
-  const sum = (s: string) => Number(sums.find((g) => g.status === s)?._sum.amount ?? 0)
-  const count = (s: string) => sums.find((g) => g.status === s)?._count._all ?? 0
+const LABEL: Record<CreditNoteLine["type"], string> = { UNDER_CANOPY: "Under-canopy", CONTRACTUAL: "Jaguar contractual" }
+
+export default async function CreditNotesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  await requirePermission(["credit-notes:view", "credit-notes:manage"])
+  const raw = await searchParams
+  const page = Math.max(Number(raw.page ?? 0) || 0, 0)
+  const result = await listCreditNotes({ fromDate: raw.from, toDate: raw.to, page })
+  const rows = toPlain(result.rows as CreditNoteLine[])
+  const pages = Math.max(Math.ceil(result.totalRows / result.pageSize), 1)
 
   return (
     <div>
-      <PageHeader title="Credit Notes" description="Jaguar discounts are tracked separately from the prepaid wallet load — the wallet always receives the full prepaid amount." />
-      <div className="mb-6 grid gap-5 sm:grid-cols-3">
-        <KpiCard label="Pending approval" value={<>{count("PENDING")} · <MoneyDisplay amount={sum("PENDING")} decimals={0} /></>} icon={Clock} iconTint="amber" />
-        <KpiCard label="Approved" value={<MoneyDisplay amount={sum("APPROVED")} decimals={0} />} icon={CheckCircle2} iconTint="emerald" />
-        <KpiCard label="Total raised" value={<MoneyDisplay amount={sum("PENDING") + sum("APPROVED") + sum("REJECTED")} decimals={0} />} icon={ReceiptText} iconTint="blue" />
+      <PageHeader title="Credit Notes" description="Jaguar credit notes raised from settlements: one for the under-canopy discount and one for the Jaguar contractual discount, per settlement." />
+      <div className="mb-6 grid gap-5 sm:grid-cols-2">
+        <KpiCard label="Under-canopy total" value={<MoneyDisplay amount={result.totals.UNDER_CANOPY ?? 0} />} icon={AlertIcon} iconTint="blue" />
+        <KpiCard label="Jaguar contractual total" value={<MoneyDisplay amount={result.totals.CONTRACTUAL ?? 0} />} icon={AlertIcon} iconTint="purple" />
       </div>
-      <CreditNotesView
-        rows={toPlain(rows)}
-        settlements={settlements.map((s) => ({ id: s.id, label: `${s.transaction.reference} · ${s.station.name}` }))}
-        canCreate={hasPermission(user.roles, "credit-notes:manage")}
-        canApprove={hasPermission(user.roles, "credit-notes:approve")}
-        currentUserId={user.id}
-      />
+      <div className="rounded-xl border border-[#E4E7F2] bg-white p-4">
+        <MiniTable<CreditNoteLine>
+          rows={rows}
+          empty="No credit notes. Set the per-litre rates in Galana Settings to raise them."
+          columns={[
+            { header: "Settlement", cell: (c) => <Link href={`/credit-notes/${encodeURIComponent(c.id)}`} className="font-semibold text-[#1226AA] hover:underline">{c.settlement}</Link> },
+            { header: "Date", cell: (c) => c.date },
+            { header: "Station", cell: (c) => c.station },
+            { header: "Type", cell: (c) => LABEL[c.type] },
+            { header: "Amount", cell: (c) => <MoneyDisplay amount={c.amount} /> },
+            { header: "Status", cell: () => <StatusBadge status="PENDING" /> },
+          ]}
+        />
+        <div className="mt-4 flex items-center justify-end gap-2 text-sm">
+          {page > 0 && <a href={`/credit-notes?page=${page - 1}`} className="rounded-lg border px-3 py-1.5">Previous</a>}
+          <span className="px-2">Page {page + 1} of {pages}</span>
+          {page + 1 < pages && <a href={`/credit-notes?page=${page + 1}`} className="rounded-lg border px-3 py-1.5">Next</a>}
+        </div>
+      </div>
     </div>
   )
 }

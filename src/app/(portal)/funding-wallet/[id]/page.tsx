@@ -1,55 +1,48 @@
-import { Wallet } from "@/components/icons"
-import { DetailPage, DetailSection, DetailFields, DetailStat } from "@/components/shared/detail"
-import { EntityAudit } from "@/components/shared/entity-audit"
-import { StatusBadge } from "@/components/shared/status-badge"
+import { DetailPage, DetailSection, DetailFields } from "@/components/shared/detail"
+import { StatusBadge, type PortalStatus } from "@/components/shared/status-badge"
 import { MoneyDisplay } from "@/components/shared/money-display"
-import { DateTimeDisplay } from "@/components/shared/date-time-display"
-import { getTopUpDetail } from "@/lib/data/details"
 import { requirePermission } from "@/lib/rbac/guard"
+import { listTopUps } from "@/lib/integrations/fuel-card-partner"
+import { auth } from "@/auth"
+import { notFound } from "next/navigation"
+import { Ticket } from "@/components/icons"
+import { toPlain } from "@/lib/serialize"
+
+const STATUS: Record<string, PortalStatus> = { "Pending Approval": "PENDING_APPROVAL", Approved: "APPROVED", Rejected: "REJECTED" }
 
 export default async function TopUpDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission("wallet:view")
+  await requirePermission(["wallet:view"])
+  const session = await auth()
   const { id } = await params
-  const r = await getTopUpDetail(id)
+  const all = toPlain(await listTopUps(session!.user!.email as string))
+  const r = all.find((x) => x.id === id)
+  if (!r) notFound()
   return (
     <DetailPage
       backHref="/funding-wallet"
-      backLabel="Funding & wallet"
-      icon={Wallet}
-      title={`Top-up · ${r.reference}`}
-      subtitle={r.wallet.customer.name}
-      badge={<StatusBadge status={r.status} />}
+      backLabel="Funding wallet"
+      icon={Ticket}
+      title={r.reference}
+      subtitle={`${r.customer} · requested by ${r.requestedBy}`}
+      badge={<StatusBadge status={STATUS[r.status]} />}
       main={
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <DetailStat label="Amount" value={<MoneyDisplay amount={Number(r.amount)} />} />
-            <DetailStat label="Requested" value={<DateTimeDisplay value={r.createdAt} />} />
-          </div>
-          {r.remarks && (
-            <DetailSection title="Remarks">
-              <p className="text-sm text-[#0B0B33]">{r.remarks}</p>
-            </DetailSection>
-          )}
-          <EntityAudit entityType="WalletTopUpRequest" entityId={r.id} />
-        </>
+        <DetailSection title="Decision">
+          <DetailFields columns={1} items={[
+            { label: "Decided by", value: r.decidedBy ?? "Not decided yet" },
+            { label: "Decided at", value: r.decidedAt ? r.decidedAt.slice(0, 16) : "—" },
+            { label: "Checker comment", value: r.checkerComment ?? "—" },
+            { label: "Credited to wallet", value: r.walletCredited ? "Yes" : "No" },
+          ]} />
+        </DetailSection>
       }
       aside={
-        <>
-          <DetailSection title="Request">
-            <DetailFields columns={1} items={[
-              { label: "Funding account", value: r.fundingAccount },
-              { label: "Requested by", value: r.maker.name },
-            ]} />
-          </DetailSection>
-          <DetailSection title="Approval">
-            <DetailFields columns={1} items={[
-              { label: "Decided by", value: r.checker?.name },
-              { label: "Decided", value: r.decidedAt ? <DateTimeDisplay value={r.decidedAt} /> : null },
-              { label: "Comment", value: r.checkerComment },
-              { label: "Receipt", value: r.prepaidReceipt ? <MoneyDisplay amount={Number(r.prepaidReceipt.grossAmount)} /> : null },
-            ]} />
-          </DetailSection>
-        </>
+        <DetailSection title="Request">
+          <DetailFields columns={1} items={[
+            { label: "Amount", value: <MoneyDisplay amount={r.amount} /> },
+            { label: "Funding account", value: r.fundingAccount },
+            { label: "Remarks", value: r.remarks ?? "—" },
+          ]} />
+        </DetailSection>
       }
     />
   )

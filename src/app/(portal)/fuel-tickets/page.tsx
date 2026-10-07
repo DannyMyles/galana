@@ -2,7 +2,7 @@ import { requirePermission } from "@/lib/rbac/guard"
 import { PageHeader } from "@/components/shared/page-header"
 import { TicketsTable } from "@/components/tickets/tickets-table"
 import { getTickets } from "@/lib/data/tickets"
-import type { TicketStatus } from "@prisma/client"
+import type { GalanaTicketStatus } from "@/lib/data/tickets"
 
 export default async function FuelTicketsPage({
   searchParams,
@@ -13,7 +13,7 @@ export default async function FuelTicketsPage({
   const params = await searchParams
   const { rows, totalRows, pageSize } = await getTickets({
     search: typeof params.search === "string" ? params.search : undefined,
-    status: typeof params.status === "string" ? (params.status as TicketStatus) : undefined,
+    status: typeof params.status === "string" ? (params.status as GalanaTicketStatus) : undefined,
     page: params.page ? Number(params.page) : 0,
   })
 

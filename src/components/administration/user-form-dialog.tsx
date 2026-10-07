@@ -32,14 +32,12 @@ export function UserFormDialog({ trigger, triggerContent, user, stations }: { tr
   const [v, setV] = useState<UserValues>(user ?? EMPTY)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [temp, setTemp] = useState<string | null>(null)
   const set = <K extends keyof UserValues>(k: K, val: UserValues[K]) => setV((p) => ({ ...p, [k]: val }))
   const isManager = v.roleNames.includes("STATION_DEALER_MANAGER")
 
   function close(next: boolean) {
     setOpen(next)
-    if (next) { setV(user ?? EMPTY); setError(null); setTemp(null) }
-    else setTemp(null)
+    if (next) { setV(user ?? EMPTY); setError(null) }
   }
 
   async function submit() {
@@ -50,8 +48,8 @@ export function UserFormDialog({ trigger, triggerContent, user, stations }: { tr
     try {
       const result = await saveUser(user?.id ?? null, v)
       router.refresh()
-      if (result.tempPassword) setTemp(result.tempPassword)
-      else { toast.success("User updated."); setOpen(false) }
+      toast.success(result.emailed ? `User created. A setup link was emailed to ${v.email}.` : "User updated.")
+      setOpen(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save user.")
     } finally {
@@ -65,17 +63,10 @@ export function UserFormDialog({ trigger, triggerContent, user, stations }: { tr
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{user ? "Edit user" : "Add user"}</DialogTitle>
-          <DialogDescription>{user ? "Change details, roles or access. Every change is audited." : "A temporary password is generated and shown once."}</DialogDescription>
+          <DialogDescription>{user ? "Change details, roles or access. Every change is audited." : "Frappe emails the new user a link to set their password."}</DialogDescription>
         </DialogHeader>
 
-        {temp ? (
-          <div className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">User created. Share this temporary password securely — it will not be shown again.</p>
-            <code className="rounded-xl bg-[#F6F7FB] px-4 py-3 text-base font-semibold tracking-wider">{temp}</code>
-            <DialogFooter><Button onClick={() => close(false)}>Done</Button></DialogFooter>
-          </div>
-        ) : (
-          <>
+        <>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-1.5 sm:col-span-2"><Label htmlFor="u-name">Full name</Label><Input id="u-name" value={v.name} onChange={(e) => set("name", e.target.value)} /></div>
               <div className="grid gap-1.5"><Label htmlFor="u-email">Email</Label><Input id="u-email" type="email" value={v.email} disabled={!!user} onChange={(e) => set("email", e.target.value)} /></div>
@@ -85,7 +76,7 @@ export function UserFormDialog({ trigger, triggerContent, user, stations }: { tr
                 <Select value={v.status} onValueChange={(s) => s && set("status", s as UserValues["status"])}>
                   <SelectTrigger className="w-full"><SelectValue>{(s: string) => s.charAt(0) + s.slice(1).toLowerCase()}</SelectValue></SelectTrigger>
                   <SelectContent>
-                    {["ACTIVE", "INACTIVE", "SUSPENDED"].map((s) => <SelectItem key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</SelectItem>)}
+                    {["ACTIVE", "INACTIVE"].map((s) => <SelectItem key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -115,8 +106,7 @@ export function UserFormDialog({ trigger, triggerContent, user, stations }: { tr
               <Button variant="outline" onClick={() => close(false)}>Cancel</Button>
               <LoadingButton disabled={busy} onClick={submit} loading={busy} loadingText="Saving…">{user ? "Save changes" : "Create user"}</LoadingButton>
             </DialogFooter>
-          </>
-        )}
+        </>
       </DialogContent>
     </Dialog>
   )

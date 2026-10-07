@@ -1,11 +1,12 @@
-import { prisma } from "@/lib/db/client"
+import { getPortalSettings } from "@/lib/integrations/fuel-card-partner"
 
+/** Portal limits and discounts. Stored on Galana Settings in Frappe. */
 export const SETTING_DEFAULTS = {
-  maxQuantityPerTxnL: "500",
-  maxValuePerTxn: "200000",
-  underCanopyDiscountPct: "1.5",
-  jaguarDiscountPct: "2",
-  staleTransactionMinutes: "30",
+  maxQuantityPerTxnL: 500,
+  maxValuePerTxn: 200000,
+  underCanopyDiscountPerL: 0,
+  jaguarDiscountPerL: 0,
+  staleTransactionMinutes: 30,
 } as const
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS
@@ -13,20 +14,11 @@ export type SettingKey = keyof typeof SETTING_DEFAULTS
 export interface PortalSettings {
   maxQuantityPerTxnL: number
   maxValuePerTxn: number
-  underCanopyDiscountPct: number
-  jaguarDiscountPct: number
+  underCanopyDiscountPerL: number
+  jaguarDiscountPerL: number
   staleTransactionMinutes: number
 }
 
 export async function getSettings(): Promise<PortalSettings> {
-  const rows = await prisma.systemSetting.findMany()
-  const map = new Map(rows.map((r) => [r.key, r.value]))
-  const num = (key: SettingKey) => Number(map.get(key) ?? SETTING_DEFAULTS[key])
-  return {
-    maxQuantityPerTxnL: num("maxQuantityPerTxnL"),
-    maxValuePerTxn: num("maxValuePerTxn"),
-    underCanopyDiscountPct: num("underCanopyDiscountPct"),
-    jaguarDiscountPct: num("jaguarDiscountPct"),
-    staleTransactionMinutes: num("staleTransactionMinutes"),
-  }
+  return getPortalSettings()
 }

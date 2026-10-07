@@ -7,12 +7,12 @@ import { SoftwareVersionsDialog } from "@/components/stations/software-versions-
 import { getPosDevices, getStationsForSelect } from "@/lib/data/pos-devices"
 import { requirePermission } from "@/lib/rbac/guard"
 import { hasPermission } from "@/lib/rbac/roles"
-import { prisma } from "@/lib/db/client"
+import { listApprovedVersions } from "@/lib/integrations/fuel-card-partner"
 import { toPlain } from "@/lib/serialize"
 
 export default async function PosDevicesPage() {
   const user = await requirePermission(["stations:monitor", "pos-devices:manage"])
-  const [devices, stations, versions] = await Promise.all([getPosDevices(), getStationsForSelect(), prisma.approvedSoftwareVersion.findMany({ orderBy: { version: "asc" } })])
+  const [devices, stations, versions] = await Promise.all([getPosDevices(), getStationsForSelect(), listApprovedVersions()])
   const canManage = hasPermission(user.roles, "pos-devices:manage")
 
   return (

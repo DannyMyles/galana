@@ -102,7 +102,7 @@ export const PORTAL_NAV_GROUPS: PortalNavGroup[] = [
       { label: "Users", href: "/administration/users", icon: UsersRound, permission: "users:manage" },
       { label: "Audit Log", href: "/administration/audit-log", icon: ScrollText, permission: "audit-log:view" },
       { label: "Integrations", href: "/administration/integrations", icon: Plug, permission: "integrations:view" },
-      { label: "Settings", href: "/administration/settings", icon: SlidersHorizontal, permission: "settings:manage" },
+      { label: "Settings", href: "/administration/settings", icon: SlidersHorizontal, permission: ["settings:manage", "discounts:manage"] },
     ],
   },
 ]

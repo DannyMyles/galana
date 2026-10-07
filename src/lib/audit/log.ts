@@ -1,8 +1,10 @@
 import { headers } from "next/headers"
-import { prisma } from "@/lib/db/client"
+import { auth } from "@/auth"
+import { writePortalAudit } from "@/lib/integrations/fuel-card-partner"
 import type { Role } from "@/lib/rbac/roles"
 
 interface WriteAuditLogInput {
+  /** Ignored: the actor is the signed-in portal user. Kept so existing callers compile. */
   userId?: string
   role?: Role
   action: string
@@ -15,26 +17,24 @@ interface WriteAuditLogInput {
 }
 
 /**
- * Writes one immutable audit entry. Every server action that mutates
- * financial or master data must call this — see US-ADM-008 / US-AUD-001..006
- * for the fields auditors expect to be able to trace.
+ * Writes one audit entry to Frappe's Activity Log (see docs/prisma-to-frappe-map.md).
+ * Every server action that mutates financial or master data must call this.
+ * The entry records the signed-in user's email, the IP and the device.
  */
 export async function writeAuditLog(input: WriteAuditLogInput) {
-  const headerList = await headers()
+  const session = await auth()
+  const actor = session?.user?.email
+  if (!actor) throw new Error("Cannot write an audit entry without a signed-in user")
 
-  await prisma.auditLog.create({
-    data: {
-      userId: input.userId,
-      role: input.role,
-      action: input.action,
-      entityType: input.entityType,
-      entityId: input.entityId,
-      oldValues: input.oldValues ?? undefined,
-      newValues: input.newValues ?? undefined,
-      result: input.result,
-      failureReason: input.failureReason,
-      ipAddress: headerList.get("x-forwarded-for") ?? undefined,
-      device: headerList.get("user-agent") ?? undefined,
-    },
+  const headerList = await headers()
+  await writePortalAudit({
+    actor,
+    action: input.action,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    oldValues: { ...(input.oldValues as object | undefined), _role: input.role },
+    newValues: { ...(input.newValues as object | undefined), _ip: headerList.get("x-forwarded-for") ?? undefined, _device: headerList.get("user-agent") ?? undefined },
+    result: input.result,
+    failureReason: input.failureReason,
   })
 }

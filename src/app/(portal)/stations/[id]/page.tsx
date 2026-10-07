@@ -33,7 +33,7 @@ export default async function StationDetailPage({ params }: { params: Promise<{ 
           <StationFormDialog
             dealers={dealers}
             products={products}
-            station={{ id: s.id, name: s.name, code: s.code, region: s.region, county: s.county, address: s.address, latitude: s.latitude, longitude: s.longitude, contactName: s.contactName, contactPhone: s.contactPhone, contactEmail: s.contactEmail, dealerId: s.dealerId, productIds: s.products.map((p) => p.productId) }}
+            station={{ id: s.id, name: s.name, code: s.code, region: s.region ?? "", county: s.county ?? "", address: s.address ?? "", latitude: s.latitude, longitude: s.longitude, contactName: s.contactName ?? "", contactPhone: s.contactPhone ?? "", contactEmail: s.contactEmail ?? "", dealerId: s.dealerId ?? "", productIds: s.products.map((p) => p.productId) }}
             trigger={<Button variant="outline" />}
             triggerContent={<><Pencil className="size-4" />Edit station</>}
           />

@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, CheckCircle2, X as Ban } from "@/components/icons"
-import type { POSStatus } from "@prisma/client"
+import type { PosDeviceStatusCode as POSStatus } from "@/lib/integrations/fuel-card-partner"
 import { RowActions } from "@/components/shared/row-actions"
 import { setPosDeviceStatus } from "@/app/(portal)/stations/pos-devices/actions"
 import type { PosDeviceListRow } from "@/lib/data/pos-devices"
@@ -31,7 +31,7 @@ export function PosDevicesTable({ devices, approvedVersions, canManage }: { devi
   const router = useRouter()
   const columns: ColumnDef<PosDeviceListRow>[] = [
     { header: "Device ID", cell: ({ row }) => <Link href={`/stations/pos-devices/${row.original.id}`} className="font-semibold hover:text-[#1226AA] hover:underline">{row.original.deviceId}</Link> },
-    { header: "Station", cell: ({ row }) => `${row.original.station.name} (${row.original.station.code})` },
+    { header: "Station", cell: ({ row }) => `${row.original.station?.name ?? "—"} (${row.original.station?.code ?? ""})` },
     {
       header: "Software",
       cell: ({ row }) => {

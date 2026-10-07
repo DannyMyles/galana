@@ -1,43 +1,51 @@
-import { SlidersHorizontal } from "@/components/icons"
-import { DetailPage, DetailSection, DetailFields, DetailStat } from "@/components/shared/detail"
-import { EntityAudit } from "@/components/shared/entity-audit"
-import { StatusBadge } from "@/components/shared/status-badge"
+import { notFound } from "next/navigation"
+import { auth } from "@/auth"
+import { DetailPage, DetailSection, DetailFields } from "@/components/shared/detail"
+import { StatusBadge, type PortalStatus } from "@/components/shared/status-badge"
 import { MoneyDisplay } from "@/components/shared/money-display"
-import { DateTimeDisplay } from "@/components/shared/date-time-display"
-import { getAdjustmentDetail } from "@/lib/data/details"
+import { EntityAudit } from "@/components/shared/entity-audit"
 import { requirePermission } from "@/lib/rbac/guard"
+import { listAdjustments, type AdjustmentRow } from "@/lib/integrations/fuel-card-partner"
+import { toPlain } from "@/lib/serialize"
+import { Ticket } from "@/components/icons"
+
+export const dynamic = "force-dynamic"
+const STATUS: Record<AdjustmentRow["status"], PortalStatus> = { "Pending Approval": "PENDING_APPROVAL", Approved: "APPROVED", Rejected: "REJECTED" }
 
 export default async function AdjustmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission(["adjustments:create", "adjustments:approve", "adjustments:view"])
+  await requirePermission(["adjustments:view"])
+  const session = await auth()
   const { id } = await params
-  const a = await getAdjustmentDetail(id)
+  const r = toPlain((await listAdjustments(session!.user!.email as string)).find((x) => x.id === id))
+  if (!r) notFound()
   return (
     <DetailPage
       backHref="/adjustments"
       backLabel="Adjustments"
-      icon={SlidersHorizontal}
-      title={`${a.direction === "CREDIT" ? "Credit" : "Debit"} adjustment`}
-      subtitle={a.wallet.customer.name}
-      badge={<StatusBadge status={a.status} />}
+      icon={Ticket}
+      title={r.reason}
+      subtitle={`${r.customer} · ${r.direction}`}
+      badge={<StatusBadge status={STATUS[r.status]} />}
       main={
         <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <DetailStat label={a.direction === "CREDIT" ? "Credited to wallet" : "Debited from wallet"} value={<MoneyDisplay amount={Number(a.amount)} />} />
-            <DetailStat label="Requested" value={<DateTimeDisplay value={a.createdAt} />} />
-          </div>
-          <DetailSection title="Reason">
-            <p className="text-sm text-[#0B0B33]">{a.reason}</p>
+          <DetailSection title="Decision">
+            <DetailFields columns={1} items={[
+              { label: "Requested by", value: r.requestedBy },
+              { label: "Requested at", value: r.requestedAt.slice(0, 16) },
+              { label: "Decided by", value: r.decidedBy ?? "Not decided yet" },
+              { label: "Decided at", value: r.decidedAt ? r.decidedAt.slice(0, 16) : "—" },
+              { label: "Checker comment", value: r.checkerComment ?? "—" },
+            ]} />
           </DetailSection>
-          <EntityAudit entityType="ManualAdjustment" entityId={a.id} />
+          <EntityAudit entityType="Adjustment" entityId={r.id} />
         </>
       }
       aside={
-        <DetailSection title="Approval">
+        <DetailSection title="Adjustment">
           <DetailFields columns={1} items={[
-            { label: "Requested by", value: a.maker.name },
-            { label: "Decided by", value: a.checker?.name },
-            { label: "Decided", value: a.decidedAt ? <DateTimeDisplay value={a.decidedAt} /> : null },
-            { label: "Checker comment", value: a.checkerComment },
+            { label: "Amount", value: <MoneyDisplay amount={r.amount} /> },
+            { label: "Direction", value: r.direction },
+            { label: "Changes wallet", value: r.walletChanged ? "Yes" : "No, not approved" },
           ]} />
         </DetailSection>
       }

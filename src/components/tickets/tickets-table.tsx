@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DataTable, actionsColumn } from "@/components/shared/data-table"
 import { StatusBadge } from "@/components/shared/status-badge"
-import { LitresDisplay } from "@/components/shared/money-display"
+import { MoneyDisplay } from "@/components/shared/money-display"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
 import type { TicketListRow } from "@/lib/data/tickets"
 import { RowActions } from "@/components/shared/row-actions"
@@ -28,28 +28,23 @@ const columns: ColumnDef<TicketListRow>[] = [
       </div>
     ),
   },
-  { header: "Product", cell: ({ row }) => row.original.product.name.replace(/\s*\(.*\)/, "") },
   {
-    header: "Remaining / Auth.",
+    header: "Consumed / Auth.",
     cell: ({ row }) => (
       <span className="whitespace-nowrap">
-        <LitresDisplay litres={String(row.original.remainingQuantityL)} />
+        {row.original.consumedAmount ? <MoneyDisplay amount={row.original.consumedAmount} /> : <span className="text-muted-foreground">—</span>}
         <span className="text-muted-foreground"> / </span>
-        <LitresDisplay litres={String(row.original.authorisedQuantityL)} />
+        <MoneyDisplay amount={row.original.authorisedAmount} />
       </span>
     ),
   },
-  { header: "Expires", cell: ({ row }) => <DateTimeDisplay value={row.original.expiresAt} formatStr="dd MMM yyyy" /> },
+  { header: "Expires", cell: ({ row }) => (row.original.expiresAt ? <DateTimeDisplay value={row.original.expiresAt} formatStr="dd MMM yyyy" /> : "—") },
   { header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
   {
     header: "Fulfilment",
     cell: ({ row }) => {
-      const t = row.original.transactions[0]
-      return t ? (
-        <Link href={`/transactions/${t.id}`} className="font-semibold text-[#1226AA] hover:underline">{t.reference}</Link>
-      ) : (
-        <span className="text-muted-foreground">Not redeemed</span>
-      )
+      const ref = row.original.transactionNumber
+      return ref ? <span className="font-semibold">{ref}</span> : <span className="text-muted-foreground">Not redeemed</span>
     },
   },
   actionsColumn<TicketListRow>((r) => <RowActions actions={[{ label: "View ticket", icon: Eye, href: `/fuel-tickets/${r.id}` }]} />),

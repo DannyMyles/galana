@@ -1,45 +1,63 @@
 import Link from "next/link"
-import { Wallet, Clock, CheckCircle2 } from "@/components/icons"
+import { auth } from "@/auth"
 import { PageHeader } from "@/components/shared/page-header"
-import { WalletSubNav } from "@/components/wallet/wallet-subnav"
-import { KpiCard } from "@/components/shared/kpi-card"
-import { QueryTabs } from "@/components/shared/sub-nav"
+import { MiniTable } from "@/components/shared/mini-table"
+import { StatusBadge, type PortalStatus } from "@/components/shared/status-badge"
 import { MoneyDisplay } from "@/components/shared/money-display"
-import { FundingHistoryTable } from "@/components/wallet/funding-history-table"
-import { getPrimaryWallet, getTopUpRequests, type TopUpFilters } from "@/lib/data/wallet"
 import { requirePermission } from "@/lib/rbac/guard"
-import { hasPermission } from "@/lib/rbac/roles"
-import { AddButton } from "@/components/shared/add-button"
+import { listTopUps, type TopUpRow } from "@/lib/integrations/fuel-card-partner"
+import { toPlain } from "@/lib/serialize"
+import { ApprovalActions } from "@/components/wallet/approval-actions"
 
-export default async function FundingWalletPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const user = await requirePermission("wallet:view")
-  const { status, search, scope } = await searchParams
-  const canCreate = hasPermission(user.roles, "wallet:topup:create")
-  const mine = canCreate && scope === "mine"
+export const dynamic = "force-dynamic"
 
-  const [wallet, requests, all] = await Promise.all([
-    getPrimaryWallet(),
-    getTopUpRequests({ status: status as TopUpFilters["status"], search, makerId: mine ? user.id : undefined }),
-    getTopUpRequests(),
-  ])
+const STATUS: Record<TopUpRow["status"], PortalStatus> = { "Pending Approval": "PENDING_APPROVAL", Approved: "APPROVED", Rejected: "REJECTED" }
+
+export default async function FundingWalletPage() {
+  await requirePermission(["wallet:view"])
+  const session = await auth()
+  const roles = (session?.user?.roles ?? []) as string[]
+  const rows = toPlain(await listTopUps(session!.user!.email as string))
+  const isMaker = roles.includes("FINANCE_MAKER") || roles.includes("SYSTEM_ADMIN")
+  const isChecker = roles.includes("FINANCE_CHECKER") || roles.includes("SYSTEM_ADMIN")
 
   return (
     <div>
       <PageHeader
-        title="Funding & Wallet"
-        description={`${wallet.customer.name} fuel wallet — the full prepaid amount is loaded; discounts are handled separately as credit notes.`}
-        actions={canCreate ? <AddButton label="Top up request" render={<Link href="/funding-wallet/topup" />} nativeButton={false} /> : undefined}
+        title="Funding Wallet"
+        description="Top-up requests for Jaguar's prepaid account. An approved top-up credits Jaguar's fuel wallet."
+        actions={
+          <div className="flex gap-2">
+            {isMaker && <Link href="/funding-wallet/topup" className="rounded-lg bg-[#1226AA] px-4 py-2 text-sm font-medium text-white">New request</Link>}
+            {isChecker && <Link href="/funding-wallet/approvals" className="rounded-lg border px-4 py-2 text-sm font-medium">Approvals</Link>}
+          </div>
+        }
       />
-      <WalletSubNav />
-
-      <div className="mb-6 grid gap-5 sm:grid-cols-3">
-        <KpiCard label="Fuel wallet balance" value={<MoneyDisplay amount={Number(wallet.balance)} decimals={0} />} icon={Wallet} iconTint="blue" />
-        <KpiCard label="Pending requests" value={all.filter((r) => r.status === "PENDING_APPROVAL").length.toString()} icon={Clock} iconTint="amber" />
-        <KpiCard label="Approved (all time)" value={all.filter((r) => r.status === "APPROVED").length.toString()} icon={CheckCircle2} iconTint="emerald" />
+      <div className="rounded-xl border border-[#E4E7F2] bg-white p-4">
+        <MiniTable<TopUpRow>
+          rows={rows}
+          empty="No top-up requests yet."
+          columns={[
+            { header: "Reference", cell: (r) => <Link href={`/funding-wallet/${r.id}`} className="font-semibold text-[#1226AA] hover:underline">{r.reference}</Link> },
+            { header: "Customer", cell: (r) => r.customer },
+            { header: "Amount", cell: (r) => <MoneyDisplay amount={r.amount} /> },
+            { header: "Requested by", cell: (r) => r.requestedBy },
+            { header: "Requested", cell: (r) => r.requestedAt.slice(0, 16) },
+            { header: "Status", cell: (r) => <StatusBadge status={STATUS[r.status]} /> },
+            {
+              header: "Decision",
+              cell: (r) =>
+                isChecker && r.status === "Pending Approval" && r.requestedBy !== session!.user!.email ? (
+                  <ApprovalActions requestId={r.id} />
+                ) : r.status === "Pending Approval" ? (
+                  <span className="text-xs text-muted-foreground">Waiting for a checker</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">{r.decidedBy ?? "—"}</span>
+                ),
+            },
+          ]}
+        />
       </div>
-
-      {canCreate && <QueryTabs param="scope" tabs={[{ label: "All requests", value: "all" }, { label: "My requests", value: "mine" }]} />}
-      <FundingHistoryTable rows={requests} />
     </div>
   )
 }

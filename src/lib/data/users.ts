@@ -1,10 +1,9 @@
-import { prisma } from "@/lib/db/client"
+import { listPortalUsers } from "@/lib/integrations/fuel-card-partner"
+import { toPlain } from "@/lib/serialize"
 
+/** Portal users are Frappe users with Galana roles. */
 export async function getUsers() {
-  return prisma.user.findMany({
-    include: { roles: { include: { role: true } } },
-    orderBy: { createdAt: "desc" },
-  })
+  return toPlain(await listPortalUsers())
 }
 
 export type UserListRow = Awaited<ReturnType<typeof getUsers>>[number]

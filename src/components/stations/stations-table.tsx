@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Eye, CheckCircle2, X as Ban } from "@/components/icons"
-import type { StationStatus } from "@prisma/client"
+import type { StationStatusCode as StationStatus } from "@/lib/integrations/fuel-card-partner"
 import { setStationStatus } from "@/app/(portal)/stations/actions"
 import { RowActions } from "@/components/shared/row-actions"
 import { EditTrigger } from "@/components/shared/icon-action-button"

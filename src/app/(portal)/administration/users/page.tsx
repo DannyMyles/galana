@@ -4,12 +4,17 @@ import { UserFormDialog } from "@/components/administration/user-form-dialog"
 import { UsersTable } from "@/components/administration/users-table"
 import { getUsers } from "@/lib/data/users"
 import { requirePermission } from "@/lib/rbac/guard"
-import { prisma } from "@/lib/db/client"
+import { listStations } from "@/lib/integrations/fuel-card-partner"
 import { AddButton } from "@/components/shared/add-button"
+
+async function getStationOptions() {
+  const result = await listStations({ pageSize: 1000 })
+  return result.rows.map((s) => ({ id: s.id, name: s.name })).sort((a, b) => a.name.localeCompare(b.name))
+}
 
 export default async function UsersPage() {
   const admin = await requirePermission("users:manage")
-  const [users, stations] = await Promise.all([getUsers(), prisma.station.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })])
+  const [users, stations] = await Promise.all([getUsers(), getStationOptions()])
 
   return (
     <div>

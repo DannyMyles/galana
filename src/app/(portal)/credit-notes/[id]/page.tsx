@@ -1,56 +1,50 @@
+import { notFound } from "next/navigation"
 import Link from "next/link"
-import { ReceiptText } from "@/components/icons"
-import { DetailPage, DetailSection, DetailFields, DetailStat } from "@/components/shared/detail"
-import { EntityAudit } from "@/components/shared/entity-audit"
+import { DetailPage, DetailSection, DetailFields } from "@/components/shared/detail"
 import { StatusBadge } from "@/components/shared/status-badge"
-import { MoneyDisplay } from "@/components/shared/money-display"
-import { DateTimeDisplay } from "@/components/shared/date-time-display"
-import { getCreditNoteDetail } from "@/lib/data/details"
+import { MoneyDisplay, LitresDisplay } from "@/components/shared/money-display"
 import { requirePermission } from "@/lib/rbac/guard"
+import { getCreditNote } from "@/lib/integrations/fuel-card-partner"
+import { toPlain } from "@/lib/serialize"
+import { ReceiptText } from "@/components/icons"
+
+export const dynamic = "force-dynamic"
+
+const LABEL = { UNDER_CANOPY: "Under-canopy discount", CONTRACTUAL: "Jaguar contractual discount" } as const
 
 export default async function CreditNoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission(["credit-notes:manage", "credit-notes:approve", "credit-notes:view"])
-  const { id } = await params
-  const c = await getCreditNoteDetail(id)
+  await requirePermission(["credit-notes:view", "credit-notes:manage"])
+  const { id: rawId } = await params
+  // Credit note ids contain `:`; some Next.js routing paths deliver the dynamic
+  // segment still percent-encoded. Decoding an already-decoded id is a no-op.
+  const id = decodeURIComponent(rawId)
+  const cn = toPlain(await getCreditNote(id).catch(() => null))
+  if (!cn) notFound()
   return (
     <DetailPage
       backHref="/credit-notes"
-      backLabel="Credit notes"
+      backLabel="Credit Notes"
       icon={ReceiptText}
-      title={c.reference ?? `Credit note ${c.id.slice(-6).toUpperCase()}`}
-      subtitle={`${c.customer.name} · ${c.type.replace(/_/g, " ").toLowerCase()}`}
-      badge={<StatusBadge status={c.status} />}
+      title={LABEL[cn.type]}
+      subtitle={`${cn.station}${cn.vehicle ? ` · ${cn.vehicle}` : ""} · ${cn.date}`}
+      badge={<StatusBadge status="PENDING" />}
       main={
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <DetailStat label="Amount" value={<MoneyDisplay amount={Number(c.amount)} />} />
-            <DetailStat label="Raised" value={<DateTimeDisplay value={c.createdAt} />} />
-          </div>
-          <DetailSection title="Reason">
-            <p className="text-sm text-[#0B0B33]">{c.reason ?? "No reason recorded."}</p>
-          </DetailSection>
-          <EntityAudit entityType="CreditNote" entityId={c.id} />
-        </>
+        <DetailSection title="Credit note" description="Raised to Jaguar from the settlement below. Nothing is posted.">
+          <DetailFields columns={1} items={[
+            { label: "Amount", value: <MoneyDisplay amount={cn.amount} /> },
+            { label: "Litres", value: <LitresDisplay litres={cn.litres} /> },
+            { label: "From settlement", value: <Link href={`/settlements/${cn.settlementId}`} className="font-medium text-[#1226AA] hover:underline">{cn.settlement}</Link> },
+          ]} />
+        </DetailSection>
       }
       aside={
-        <>
-          <DetailSection title="Approval">
-            <DetailFields columns={1} items={[
-              { label: "Prepared by", value: c.maker?.name ?? "System (auto-generated)" },
-              { label: "Decided by", value: c.checker?.name },
-              { label: "Decided", value: c.decidedAt ? <DateTimeDisplay value={c.decidedAt} /> : null },
-              { label: "Checker comment", value: c.checkerComment },
-            ]} />
-          </DetailSection>
-          {c.settlement && (
-            <DetailSection title="Linked settlement">
-              <DetailFields columns={1} items={[
-                { label: "Settlement", value: <Link href={`/settlements/${c.settlement.id}`} className="text-[#1226AA] hover:underline">{c.settlement.transaction.reference}</Link> },
-                { label: "Station", value: c.settlement.station.name },
-              ]} />
-            </DetailSection>
-          )}
-        </>
+        <DetailSection title="Settlement">
+          <DetailFields columns={1} items={[
+            { label: "Station", value: cn.station },
+            { label: "Vehicle", value: cn.vehicle ?? "—" },
+            { label: "Date", value: cn.date },
+          ]} />
+        </DetailSection>
       }
     />
   )

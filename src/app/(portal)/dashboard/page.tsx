@@ -1,136 +1,173 @@
 import Link from "next/link"
-import { Wallet, Fuel, CheckCircle2, AlertTriangle, Plus } from "@/components/icons"
 import { auth } from "@/auth"
-import { DashboardHeader } from "@/components/dashboard/dashboard-header"
+import { PageHeader } from "@/components/shared/page-header"
 import { KpiCard } from "@/components/shared/kpi-card"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ConsumptionTrendChart } from "@/components/dashboard/consumption-trend-chart"
-import { QuoteCard } from "@/components/dashboard/quote-card"
-import { getRandomQuote } from "@/lib/data/quote"
-import { StatusDonut } from "@/components/dashboard/status-donut"
-import { RecentTransactionsTable } from "@/components/dashboard/recent-transactions-table"
+import { MiniTable } from "@/components/shared/mini-table"
 import { MoneyDisplay, LitresDisplay } from "@/components/shared/money-display"
-import { redirect } from "next/navigation"
-import { hasPermission } from "@/lib/rbac/roles"
-import { landingPath } from "@/lib/rbac/guard"
-import { getFinanceDashboardData } from "@/lib/data/dashboard"
+import { DateTimeDisplay } from "@/components/shared/date-time-display"
+import { dashboardFor } from "@/lib/data/portal-reports"
+import { BarsChart, DonutChart, TrendChart } from "@/components/charts/portal-charts"
+import { requirePermission } from "@/lib/rbac/guard"
+import { Plug, AlertTriangle, CheckCircle2 } from "@/components/icons"
+import type { Unavailable as UnavailableItem } from "@/lib/integrations/fuel-card-partner"
+
+const TICKET_LABEL: Record<string, string> = { Reserved: "Active", Dispensing: "Fuelling", Consumed: "Consumed", Expired: "Expired", Refunded: "Cancelled" }
+
+function Unavailable({ item }: { item: UnavailableItem }) {
+  return (
+    <div className="rounded-xl border border-dashed border-[#D5D9EA] bg-[#F6F7FB] p-4">
+      <p className="text-sm font-semibold text-[#3B3E63]">{item.label}</p>
+      <p className="mt-1 text-xs text-[#6A6C8C]">{item.reason}</p>
+    </div>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mb-8">
+      <h2 className="mb-3 text-base font-semibold text-[#1B1D3A]">{title}</h2>
+      {children}
+    </section>
+  )
+}
 
 export default async function DashboardPage() {
+  await requirePermission(["reports:ops", "reports:finance", "reports:jaguar", "reports:dealer"])
   const session = await auth()
-  if (session?.user && !hasPermission(session.user.roles, "wallet:view")) redirect(landingPath(session.user.roles))
-  const [data, quote] = await Promise.all([getFinanceDashboardData(), getRandomQuote()])
-  const firstName = (session?.user?.name ?? "there").split(" ")[0]
-  const canTopUp = session?.user ? hasPermission(session.user.roles, "wallet:topup:create") : false
-  const maxLitres = Math.max(1, ...data.topStations.map((s) => s.litres))
+  const d = await dashboardFor(session!.user!.email as string)
 
   return (
-    <div className="w-full">
-      <DashboardHeader
-        firstName={firstName}
-        quote={<QuoteCard quote={quote} />}
-        actions={
-          canTopUp ? (
-            <Button render={<Link href="/funding-wallet/topup" />} nativeButton={false} className="h-12 rounded-xl px-5">
-              <Plus className="size-4" />
-              Top up Request
-            </Button>
-          ) : undefined
-        }
+    <div>
+      <PageHeader
+        title="Dashboard"
+        description={d.scope === "station" ? `Your station: ${d.dealer?.stationName ?? d.station}` : "Operations, finance and Jaguar figures from the fuel card service."}
       />
 
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 min-[1800px]:grid-cols-5">
-        <KpiCard label="Fuel Wallet Balance" value={<MoneyDisplay amount={data.walletBalance} decimals={0} />} icon={Wallet} iconTint="blue" />
-        <KpiCard label="Total Top-ups" value={<MoneyDisplay amount={data.totalFunding} decimals={0} />} icon={Plus} iconTint="purple" />
-        <KpiCard
-          label="Total Consumption (MTD)"
-          value={<LitresDisplay litres={data.monthConsumptionLitres} />}
-          icon={Fuel}
-          iconTint="amber"
-        />
-        <KpiCard
-          label="Completed Transactions"
-          value={data.completedTransactionsCount.toLocaleString()}
-          icon={CheckCircle2}
-          iconTint="emerald"
-        />
-        <KpiCard
-          label="Pending Reconciliation"
-          value={data.pendingReconciliationCount.toLocaleString()}
-          icon={AlertTriangle}
-          iconTint="purple"
-        />
-      </div>
+      {d.operations && (
+        <Section title="Operations">
+          <div className="mb-5 grid gap-5 sm:grid-cols-2 2xl:grid-cols-4">
+            <KpiCard label="Active stations" value={d.operations.activeStations.toString()} icon={Plug} iconTint="blue" />
+            <KpiCard label="Active POS devices" value={d.operations.activePosDevices.toString()} icon={Plug} iconTint="emerald" />
+            <KpiCard label="Today's fuelling" value={`${d.operations.today.transactions}`} helperText={`${d.operations.today.litres.toFixed(1)} L`} icon={CheckCircle2} iconTint="blue" />
+            <KpiCard label="Failed transactions" value={d.operations.failedTransactions.count.toString()} icon={AlertTriangle} iconTint="red" />
+          </div>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <div className="rounded-xl border border-[#E4E7F2] bg-white p-4">
+              <p className="mb-3 text-sm font-semibold">Top-consuming stations (last 30 days)</p>
+              <MiniTable rows={d.operations.topStations} empty="No fuelling in this period." columns={[
+                { header: "Station", cell: (s) => s.station },
+                { header: "Litres", cell: (s) => <LitresDisplay litres={s.litres} /> },
+                { header: "Amount", cell: (s) => <MoneyDisplay amount={s.amount} /> },
+              ]} />
+            </div>
+            <div className="rounded-xl border border-[#E4E7F2] bg-white p-4">
+              <p className="mb-3 text-sm font-semibold">Tickets nearing expiry (next 2 hours)</p>
+              <MiniTable rows={d.operations.ticketsNearingExpiry} empty="No tickets are close to expiry." columns={[
+                { header: "Ticket", cell: (t) => t.ticketReference },
+                { header: "Vehicle", cell: (t) => t.vehicle ?? "—" },
+                { header: "Expires", cell: (t) => <DateTimeDisplay value={t.expiresOn} formatStr="dd MMM HH:mm" /> },
+              ]} />
+            </div>
+          </div>
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
+            <DonutChart
+              title="Fuelling outcomes"
+              description="Completed against failed, over the period"
+              data={[{ name: "Completed", value: d.outcomes?.completed ?? 0 }, { name: "Failed", value: d.outcomes?.failed ?? 0 }]}
+            />
+            <DonutChart
+              title="Tickets by status"
+              description="Tickets created in the period"
+              data={Object.entries(d.ticketStatus ?? {}).map(([k, v]) => ({ name: TICKET_LABEL[k] ?? k, value: v }))}
+            />
+          </div>
+          <div className="mt-5">
+            <TrendChart title="Litres dispensed per day" data={(d.trend ?? []).map((t) => ({ date: t.date, value: t.litres }))} />
+          </div>
+        </Section>
+      )}
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-lg">Consumption Trend</CardTitle>
-            <p className="text-sm text-muted-foreground">Litres dispensed per day, last 30 days</p>
-          </CardHeader>
-          <CardContent>
-            <ConsumptionTrendChart data={data.consumptionTrend} />
-          </CardContent>
-        </Card>
+      {d.finance && (
+        <Section title="Finance">
+          <div className="mb-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <KpiCard label="Fuel-wallet balance" value={<MoneyDisplay amount={d.finance.fuelWalletBalance} />} icon={CheckCircle2} iconTint="emerald" />
+            <KpiCard label="Consumption (30 days)" value={<MoneyDisplay amount={d.finance.totalConsumption.amount} />} icon={CheckCircle2} iconTint="blue" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Unavailable item={d.finance.totalJaguarFunding} />
+            <Unavailable item={d.finance.dealerSettlementLiability} />
+            <Unavailable item={d.finance.outstandingReconciliationItems} />
+          </div>
+          <div className="mt-5">
+            <TrendChart title="Consumption per day (KES)" unit="KES" data={(d.trend ?? []).map((t) => ({ date: t.date, value: t.amount }))} />
+          </div>
+        </Section>
+      )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Transactions</CardTitle>
-            <p className="text-sm text-muted-foreground">Breakdown by status</p>
-          </CardHeader>
-          <CardContent>
-            <StatusDonut data={data.statusBreakdown} />
-          </CardContent>
-        </Card>
-      </div>
+      {d.jaguar && (
+        <Section title="Jaguar">
+          <div className="mb-5 grid gap-5 sm:grid-cols-3">
+            <KpiCard label="Prepaid balance" value={<MoneyDisplay amount={d.jaguar.prepaidBalance} />} icon={CheckCircle2} iconTint="emerald" />
+            <KpiCard label="Consumption (30 days)" value={<MoneyDisplay amount={d.jaguar.consumption.amount} />} icon={CheckCircle2} iconTint="blue" />
+            <KpiCard label="Active tickets" value={d.jaguar.activeTickets.toString()} icon={Plug} iconTint="purple" />
+          </div>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <div className="rounded-xl border border-[#E4E7F2] bg-white p-4">
+              <p className="mb-3 text-sm font-semibold">By vehicle</p>
+              <MiniTable rows={d.jaguar.byVehicle} empty="No fuelling in this period." columns={[
+                { header: "Vehicle", cell: (v) => v.vehicle },
+                { header: "Litres", cell: (v) => <LitresDisplay litres={v.litres} /> },
+                { header: "Amount", cell: (v) => <MoneyDisplay amount={v.amount} /> },
+              ]} />
+            </div>
+            <div className="rounded-xl border border-[#E4E7F2] bg-white p-4">
+              <p className="mb-3 text-sm font-semibold">By station</p>
+              <MiniTable rows={d.jaguar.byStation} empty="No fuelling in this period." columns={[
+                { header: "Station", cell: (s) => s.station },
+                { header: "Litres", cell: (s) => <LitresDisplay litres={s.litres} /> },
+                { header: "Amount", cell: (s) => <MoneyDisplay amount={s.amount} /> },
+              ]} />
+            </div>
+          </div>
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
+            <BarsChart title="Litres by vehicle" data={d.jaguar.byVehicle.map((v) => ({ label: v.vehicle, value: v.litres }))} />
+            <DonutChart title="Litres by station" description="Share of fuelling per station" data={d.jaguar.byStation.map((s) => ({ name: s.station, value: s.litres }))} />
+          </div>
+        </Section>
+      )}
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Recent Transactions</CardTitle>
-            <Button variant="link" render={<Link href="/transactions" />} nativeButton={false}>
-              View all
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <RecentTransactionsTable rows={data.recentTransactions} />
-          </CardContent>
-        </Card>
+      {d.dealer && (
+        <Section title="Your station">
+          <div className="mb-5 grid gap-5 sm:grid-cols-3">
+            <KpiCard label="Consumption (30 days)" value={<MoneyDisplay amount={d.dealer.consumption.amount} />} helperText={`${d.dealer.consumption.litres.toFixed(1)} L`} icon={CheckCircle2} iconTint="blue" />
+            <KpiCard label="Failed transactions" value={d.dealer.failedTransactions.toString()} icon={AlertTriangle} iconTint="red" />
+            <KpiCard label="Transactions" value={d.dealer.consumption.transactions.toString()} icon={Plug} iconTint="purple" />
+          </div>
+          <div className="mb-5 grid gap-4 sm:grid-cols-2">
+            <Unavailable item={d.dealer.currentDealerCredits} />
+            <Unavailable item={d.dealer.settlementStatus} />
+          </div>
+          <div className="rounded-xl border border-[#E4E7F2] bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold">Recent transactions</p>
+              <Link href="/transactions" className="text-sm text-[#1226AA] hover:underline">All transactions</Link>
+            </div>
+            <MiniTable rows={d.dealer.transactionHistory} empty="No transactions in this period." columns={[
+              { header: "Reference", cell: (t) => t.reference },
+              { header: "Date", cell: (t) => t.date },
+              { header: "Vehicle", cell: (t) => t.vehicle ?? "—" },
+              { header: "Litres", cell: (t) => <LitresDisplay litres={t.litres} /> },
+              { header: "Amount", cell: (t) => <MoneyDisplay amount={t.amount} /> },
+            ]} />
+          </div>
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
+            <DonutChart title="Completed against failed" data={[{ name: "Completed", value: d.dealer.consumption.transactions }, { name: "Failed", value: d.dealer.failedTransactions }]} />
+            <TrendChart title="Litres per day at your station" data={(d.trend ?? []).map((t) => ({ date: t.date, value: t.litres }))} />
+          </div>
+        </Section>
+      )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Top Stations</CardTitle>
-            <p className="text-sm text-muted-foreground">By litres dispensed</p>
-          </CardHeader>
-          <CardContent>
-            {data.topStations.length === 0 ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">No completed transactions yet.</p>
-            ) : (
-              <ul className="flex flex-col gap-5">
-                {data.topStations.map((station, index) => (
-                  <li key={station.name}>
-                    <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-                      <span className="flex min-w-0 items-center gap-3">
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1226AA]/10 text-xs font-semibold text-[#1226AA]">
-                          {index + 1}
-                        </span>
-                        <span className="truncate font-medium text-[#0B0B33]">{station.name}</span>
-                      </span>
-                      <LitresDisplay litres={station.litres} className="shrink-0 font-semibold" />
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-[#EEF0F8]">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-[#1226AA] to-[#F75B8C]"
-                        style={{ width: `${(station.litres / maxLitres) * 100}%` }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {d.sections.length === 0 && <p className="text-sm text-muted-foreground">No dashboard sections are available for your role.</p>}
     </div>
   )
 }

@@ -1,8 +1,6 @@
 /**
- * Canonical role list for the Galana Portal, mirrored from `RoleName` in
- * prisma/schema.prisma. Kept as a standalone module (rather than importing
- * the Prisma enum) so client components can use it without pulling in
- * @prisma/client.
+ * Canonical role list for the Galana Portal. These match the Frappe roles named
+ * "Galana <RoleName>" (see jpl_fuel_card/api/partner/portal_auth.py).
  */
 export const ROLES = [
   "SYSTEM_ADMIN",
@@ -75,6 +73,7 @@ export const PERMISSIONS = [
   "reconciliation:view",
   "exceptions:view",
   "settings:manage",
+  "discounts:manage",
   "integrations:view",
 ] as const
 
@@ -122,6 +121,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "reversals:view",
     "credit-notes:view",
     "exceptions:view",
+    "discounts:manage",
   ],
   FINANCE_CHECKER: [
     "wallet:topup:approve",
@@ -139,6 +139,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "reversals:view",
     "credit-notes:view",
     "exceptions:view",
+    "discounts:manage",
   ],
   OPS_FUEL_CARD: [
     "stations:manage",
