@@ -1,0 +1,3309 @@
+{
+  "info": {
+    "_postman_id": "6b277bc0-4ff7-4f80-8759-69b20bd0c4ba",
+    "name": "Galana Fuel Card Partner API",
+    "description": "jpl_fuel_card partner API (/api/method/jpl_fuel_card.api.partner.v1.*).\n\nSet base_url (environment or collection variable) to your Frappe site, e.g. http://localhost:8000 or https://erpstaging.jaguar-petroleum.com.\n\n1. Run a Login request in Auth \u2014 it saves the access/refresh token for that role automatically.\n2. Each folder already points its Authorization at the right saved token (galana_access_token / jaguar_access_token / pos_access_token).\n3. For Transaction Events, set the client_id and client_secret collection variables from your OAuth Client record first \u2014 the request signs itself.\n4. Portal endpoints (Galana Portal folder) take an 'actor' parameter \u2014 the real Galana portal user's email, not the service account. The collection variables admin_email / finance_maker_email / finance_checker_email / ops_email / station_manager_email / auditor_email are pre-filled with the local crm site's real users (as of 2026-10-07), already wired into the requests that semantically need that role \u2014 e.g. Create Top-up uses finance_maker_email, Decide Top-up uses finance_checker_email. These are only emails, not secrets; their passwords are not in this collection.\n5. Most request bodies/params are pre-filled with real example values from the local crm site (station TEST-ST-01, vehicle KTEST 001, dealer 'TEST Dealer', POS device TEST-POS-0002, a real completed transaction g3ie40lg7o, etc.) so you can mostly just hit Send. A few genuinely dynamic values chain automatically between requests: POS > Authorise saves last_ticket_reference/last_authorization_code (used by Start Fuelling, Cancel Transaction, Jaguar > Transaction Events); Create Top-up/Adjustment/Reversal each save their own id (used by the matching Decide request). Run the 'Create'/'Authorise' request before the one that depends on it.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{galana_access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "galana_username",
+      "value": "galana.partner.api@galana.co.ke",
+      "type": "string"
+    },
+    {
+      "key": "galana_password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jaguar_username",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jaguar_password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pos_username",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pos_password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "galana_access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "galana_refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jaguar_access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jaguar_refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pos_access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pos_refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "client_id",
+      "value": "",
+      "type": "string",
+      "description": "OAuth Client id for app_name 'Galana Partner' \u2014 needed to sign transaction_events."
+    },
+    {
+      "key": "client_secret",
+      "value": "",
+      "type": "string",
+      "description": "OAuth Client secret \u2014 needed to sign transaction_events. Never commit a real value."
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@galana.co.ke",
+      "type": "string",
+      "description": "John Doe \u2014 Galana SYSTEM_ADMIN. Default actor for anything not maker/checker-specific."
+    },
+    {
+      "key": "finance_maker_email",
+      "value": "finance.maker@galana.co.ke",
+      "type": "string",
+      "description": "Jane Wanjiku \u2014 Galana FINANCE_MAKER. actor for Create Top-up / Create Adjustment."
+    },
+    {
+      "key": "finance_checker_email",
+      "value": "finance.checker@galana.co.ke",
+      "type": "string",
+      "description": "Peter Otieno \u2014 Galana FINANCE_CHECKER. actor for Decide Top-up / Decide Adjustment / Decide Reversal. Cannot be the same person as the maker."
+    },
+    {
+      "key": "ops_email",
+      "value": "ops@galana.co.ke",
+      "type": "string",
+      "description": "Mary Achieng \u2014 Galana OPS_FUEL_CARD. actor for Add EPRA Price / Create Reversal."
+    },
+    {
+      "key": "station_manager_email",
+      "value": "station.manager@galana.co.ke",
+      "type": "string",
+      "description": "John M. \u2014 Galana STATION_DEALER_MANAGER, scoped to one station."
+    },
+    {
+      "key": "auditor_email",
+      "value": "auditor@galana.co.ke",
+      "type": "string",
+      "description": "Grace Njeri \u2014 Galana INTERNAL_AUDITOR, read-only across the portal."
+    },
+    {
+      "key": "last_ticket_reference",
+      "value": "",
+      "type": "string",
+      "description": "Auto-saved by POS > Authorise. Used by Start Fuelling, Cancel Transaction and Jaguar > Transaction Events."
+    },
+    {
+      "key": "last_authorization_code",
+      "value": "",
+      "type": "string",
+      "description": "Auto-saved by POS > Authorise. Used by Validate Ticket, Ticket Status and Jaguar > Transaction Events."
+    },
+    {
+      "key": "last_topup_id",
+      "value": "",
+      "type": "string",
+      "description": "Auto-saved by Create Top-up. Used by Decide Top-up."
+    },
+    {
+      "key": "last_adjustment_id",
+      "value": "",
+      "type": "string",
+      "description": "Auto-saved by Create Adjustment. Used by Decide Adjustment."
+    },
+    {
+      "key": "last_reversal_id",
+      "value": "",
+      "type": "string",
+      "description": "Auto-saved by Create Reversal. Used by Decide Reversal."
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login \u2014 Galana service account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.login"
+              ]
+            },
+            "description": "Login with the Galana Partner API service account. Saves tokens to galana_access_token / galana_refresh_token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usr\": \"{{galana_username}}\",\n  \"pwd\": \"{{galana_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body && body.tokens) {",
+                  "    pm.collectionVariables.set(\"galana_access_token\", body.tokens.access_token);",
+                  "    pm.collectionVariables.set(\"galana_refresh_token\", body.tokens.refresh_token);",
+                  "    console.log(\"Saved galana tokens.\");",
+                  "} else {",
+                  "    console.warn(\"Login did not return tokens:\", body);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login \u2014 Jaguar (Brian)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.login"
+              ]
+            },
+            "description": "Login with a Jaguar Partner API account. Saves tokens to jaguar_access_token / jaguar_refresh_token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usr\": \"{{jaguar_username}}\",\n  \"pwd\": \"{{jaguar_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body && body.tokens) {",
+                  "    pm.collectionVariables.set(\"jaguar_access_token\", body.tokens.access_token);",
+                  "    pm.collectionVariables.set(\"jaguar_refresh_token\", body.tokens.refresh_token);",
+                  "    console.log(\"Saved jaguar tokens.\");",
+                  "} else {",
+                  "    console.warn(\"Login did not return tokens:\", body);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login \u2014 POS terminal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.login"
+              ]
+            },
+            "description": "Login with a POS Partner API account. Saves tokens to pos_access_token / pos_refresh_token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usr\": \"{{pos_username}}\",\n  \"pwd\": \"{{pos_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body && body.tokens) {",
+                  "    pm.collectionVariables.set(\"pos_access_token\", body.tokens.access_token);",
+                  "    pm.collectionVariables.set(\"pos_refresh_token\", body.tokens.refresh_token);",
+                  "    console.log(\"Saved pos tokens.\");",
+                  "} else {",
+                  "    console.warn(\"Login did not return tokens:\", body);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.refresh_token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.refresh_token"
+              ]
+            },
+            "description": "Exchange a refresh token for a new access/refresh token pair. The old one is revoked. Swap the variable for jaguar_refresh_token / pos_refresh_token as needed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{galana_refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.logout"
+              ]
+            },
+            "description": "Revokes the current access token. Swap the Bearer token to log out a different session.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{galana_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "allow_guest endpoints \u2014 no Bearer token required for login itself."
+    },
+    {
+      "name": "Jaguar (Brian)",
+      "item": [
+        {
+          "name": "Customer Float",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.customer_float?customer=Jaguar Petroleum&amount=5000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.customer_float"
+              ],
+              "query": [
+                {
+                  "key": "customer",
+                  "value": "Jaguar Petroleum"
+                },
+                {
+                  "key": "amount",
+                  "value": "5000"
+                }
+              ]
+            },
+            "description": "Is there enough float for this amount? Prepaid returns float_balance; credit returns credit_limit/utilized_credit/available_credit.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jaguar_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "EPRA Prices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.epra_prices?product=Automotive Gasoil Local Lot Costed (Litre)",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.epra_prices"
+              ],
+              "query": [
+                {
+                  "key": "product",
+                  "value": "Automotive Gasoil Local Lot Costed (Litre)"
+                }
+              ]
+            },
+            "description": "Current EPRA price per litre. Omit product for all products.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jaguar_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Transaction Events (signed)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.transaction_events",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.transaction_events"
+              ]
+            },
+            "description": "Push one completed POS transaction. Requires X-Client-Id/X-Timestamp/X-Signature \u2014 computed automatically by this request's pre-request script. Set collection variables client_id and client_secret first (from your OAuth Client record). ticketReference/authorizationCode default to whatever the POS folder's Authorise request last saved \u2014 run that first, or paste in a real Reserved ticket. transactionNumber uses Postman's {{$timestamp}} so repeat sends don't just return 'duplicate': true. Idempotent on ptsId+transactionNumber.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticketReference\": \"{{last_ticket_reference}}\",\n  \"authorizationCode\": \"{{last_authorization_code}}\",\n  \"ptsId\": \"TEST-POS-0002\",\n  \"transactionNumber\": \"TXN-{{$timestamp}}\",\n  \"transactionDateTime\": \"2026-10-07 10:00:00\",\n  \"amount\": 950,\n  \"volume\": 4.44,\n  \"price\": 214,\n  \"pumpNumber\": 1,\n  \"nozzleNumber\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jaguar_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Signs the request for transaction_events.",
+                  "// Fill in collection variables client_id / client_secret from your OAuth Client record first.",
+                  "const timestamp = Math.floor(Date.now() / 1000).toString();",
+                  "const rawBody = pm.request.body ? pm.request.body.raw : \"\";",
+                  "const secret = pm.collectionVariables.get(\"client_secret\");",
+                  "const clientId = pm.collectionVariables.get(\"client_id\");",
+                  "if (!secret || !clientId) {",
+                  "    console.warn(\"Set client_id and client_secret collection variables before calling transaction_events.\");",
+                  "}",
+                  "const signature = \"sha256=\" + CryptoJS.HmacSHA256(timestamp + \".\" + rawBody, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({ key: \"X-Timestamp\", value: timestamp });",
+                  "pm.request.headers.upsert({ key: \"X-Signature\", value: signature });",
+                  "pm.request.headers.upsert({ key: \"X-Client-Id\", value: clientId });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "The three endpoints available to Jaguar (require_partner_user: Galana, Jaguar or POS)."
+    },
+    {
+      "name": "POS",
+      "item": [
+        {
+          "name": "POS Device Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.pos_device?serial_number=TEST-POS-0002&software_version=TEST-1.0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.pos_device"
+              ],
+              "query": [
+                {
+                  "key": "serial_number",
+                  "value": "TEST-POS-0002"
+                },
+                {
+                  "key": "software_version",
+                  "value": "TEST-1.0"
+                }
+              ]
+            },
+            "description": "Device must be Active, allocated to a station, and running approved software.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pos_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Ticket",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.validate_ticket?authorization_code={{last_authorization_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.validate_ticket"
+              ],
+              "query": [
+                {
+                  "key": "authorization_code",
+                  "value": "{{last_authorization_code}}"
+                }
+              ]
+            },
+            "description": "Read-only check \u2014 does not consume the ticket. Defaults to whatever Authorise last saved; swap for ticket_reference if you prefer.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pos_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ticket Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.ticket_status?authorization_code={{last_authorization_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.ticket_status"
+              ],
+              "query": [
+                {
+                  "key": "authorization_code",
+                  "value": "{{last_authorization_code}}"
+                }
+              ]
+            },
+            "description": "Status of a ticket: Reserved, Dispensing, Consumed, Expired, Refunded, Pending Reconciliation.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pos_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Authorise",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.authorise",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.authorise"
+              ]
+            },
+            "description": "Reserve fuel for a vehicle. Returns the 8-digit authorisation code and expiry. Refused if float is insufficient \u2014 top up the wallet first (Wallet folder) if customer_float shows a negative balance. On success, saves last_ticket_reference / last_authorization_code for the rest of this folder and for Jaguar > Transaction Events.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": \"Jaguar Petroleum\",\n  \"vehicle_id\": \"KTEST 001\",\n  \"fuel_amount\": 1000,\n  \"fuel_station\": \"TEST-ST-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pos_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body && body.message && body.message.ticket_reference) {",
+                  "    pm.collectionVariables.set(\"last_ticket_reference\", body.message.ticket_reference);",
+                  "    console.log(\"Saved ticket_reference:\", body.message.ticket_reference);",
+                  "} else {",
+                  "    console.warn(\"ticket_reference not found in response:\", body);",
+                  "}",
+                  "if (body && body.message && body.message.authorization_code) {",
+                  "    pm.collectionVariables.set(\"last_authorization_code\", body.message.authorization_code);",
+                  "    console.log(\"Saved authorization_code:\", body.message.authorization_code);",
+                  "} else {",
+                  "    console.warn(\"authorization_code not found in response:\", body);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start Fuelling",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.start_fuelling",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.start_fuelling"
+              ]
+            },
+            "description": "Moves a Reserved ticket to Dispensing. Run Authorise first \u2014 this uses whatever it last saved.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pos_serial\": \"TEST-POS-0002\",\n  \"software_version\": \"TEST-1.0\",\n  \"ticket_reference\": \"{{last_ticket_reference}}\",\n  \"authorization_code\": \"\",\n  \"station\": \"TEST-ST-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pos_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.cancel_transaction",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.cancel_transaction"
+              ]
+            },
+            "description": "Only a Reserved ticket can be cancelled \u2014 don't run this after Start Fuelling in the same chain, it'll correctly fail once the ticket is Dispensing.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_reference\": \"{{last_ticket_reference}}\",\n  \"authorization_code\": \"\",\n  \"reason\": \"Customer cancelled\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pos_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.request_otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.request_otp"
+              ]
+            },
+            "description": "Send a fuelling OTP to the driver's phone. id_number is the driver's national ID as recorded on the Fuel Card Driver record.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicle_id\": \"KTEST 001\",\n  \"id_number\": \"12345678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pos_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.confirm_otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "method",
+                "jpl_fuel_card.api.partner.v1.confirm_otp"
+              ]
+            },
+            "description": "Confirm a single-use, expiring OTP. otp is a placeholder \u2014 use the real code sent by Request OTP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"000000\",\n  \"id_number\": \"12345678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pos_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "require_pos_user: Galana or POS. Jaguar is refused on this folder."
+    },
+    {
+      "name": "Galana Portal (service account only)",
+      "item": [
+        {
+          "name": "Customers & Vehicles",
+          "item": [
+            {
+              "name": "Galana Customers",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.galana_customers",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.galana_customers"
+                  ]
+                },
+                "description": "Customers Galana serves (Galana Settings.galana_customers).",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Portal Customers (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.portal_customers?actor={{admin_email}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.portal_customers"
+                  ],
+                  "query": [
+                    {
+                      "key": "actor",
+                      "value": "{{admin_email}}"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Portal Customer (one)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.portal_customer?actor={{admin_email}}&name=Jaguar Petroleum",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.portal_customer"
+                  ],
+                  "query": [
+                    {
+                      "key": "actor",
+                      "value": "{{admin_email}}"
+                    },
+                    {
+                      "key": "name",
+                      "value": "Jaguar Petroleum"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Customer Consumption",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.customer_consumption?customer=Jaguar Petroleum&vehicle=KTEST 001",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.customer_consumption"
+                  ],
+                  "query": [
+                    {
+                      "key": "customer",
+                      "value": "Jaguar Petroleum"
+                    },
+                    {
+                      "key": "vehicle",
+                      "value": "KTEST 001"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Customer Summary",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.customer_summary?customer=Jaguar Petroleum",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.customer_summary"
+                  ],
+                  "query": [
+                    {
+                      "key": "customer",
+                      "value": "Jaguar Petroleum"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Vehicle Details",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.vehicle_details?vehicle_number=KTEST 001",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.vehicle_details"
+                  ],
+                  "query": [
+                    {
+                      "key": "vehicle_number",
+                      "value": "KTEST 001"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Ticket Reconciliation Feed",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.ticket_reconciliation?customer=Jaguar Petroleum",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.ticket_reconciliation"
+                  ],
+                  "query": [
+                    {
+                      "key": "customer",
+                      "value": "Jaguar Petroleum"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Audit Trail (for a customer)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.audit_trail?customer=Jaguar Petroleum&limit=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.audit_trail"
+                  ],
+                  "query": [
+                    {
+                      "key": "customer",
+                      "value": "Jaguar Petroleum"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": ""
+        },
+        {
+          "name": "Dashboard & Reports",
+          "item": [
+            {
+              "name": "Portal Dashboard",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.portal_dashboard?actor={{admin_email}}&days=30",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.portal_dashboard"
+                  ],
+                  "query": [
+                    {
+                      "key": "actor",
+                      "value": "{{admin_email}}"
+                    },
+                    {
+                      "key": "days",
+                      "value": "30"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Portal Report",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.portal_report?actor={{admin_email}}&from_date=2026-09-01&to_date=2026-10-07",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.portal_report"
+                  ],
+                  "query": [
+                    {
+                      "key": "actor",
+                      "value": "{{admin_email}}"
+                    },
+                    {
+                      "key": "from_date",
+                      "value": "2026-09-01"
+                    },
+                    {
+                      "key": "to_date",
+                      "value": "2026-10-07"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": ""
+        },
+        {
+          "name": "Tickets & Transactions",
+          "item": [
+            {
+              "name": "Tickets (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.tickets?search=&status=&page=0&page_size=8",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.tickets"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "0"
+                    },
+                    {
+                      "key": "page_size",
+                      "value": "8"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Transactions (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.transactions?search=&status=COMPLETED&station=TEST-ST-01&from_date=2026-09-01&to_date=2026-10-07&page=0&page_size=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.transactions"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": "COMPLETED"
+                    },
+                    {
+                      "key": "station",
+                      "value": "TEST-ST-01"
+                    },
+                    {
+                      "key": "from_date",
+                      "value": "2026-09-01"
+                    },
+                    {
+                      "key": "to_date",
+                      "value": "2026-10-07"
+                    },
+                    {
+                      "key": "page",
+                      "value": "0"
+                    },
+                    {
+                      "key": "page_size",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Transaction (one)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.transaction?transaction_id=g3ie40lg7o",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.transaction"
+                  ],
+                  "query": [
+                    {
+                      "key": "transaction_id",
+                      "value": "g3ie40lg7o"
+                    }
+                  ]
+                },
+                "description": "g3ie40lg7o is the real TEST-TX-0030 fuelling record on the local crm site \u2014 swap for any id from Transactions (list).",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": ""
+        },
+        {
+          "name": "Stations, Dealers & Devices",
+          "item": [
+            {
+              "name": "Stations (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.stations?search=&region=&status=&page=0",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.stations"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "region",
+                      "value": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "0"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Station (one)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.station?station_id=TEST-ST-01",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.station"
+                  ],
+                  "query": [
+                    {
+                      "key": "station_id",
+                      "value": "TEST-ST-01"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Save Station",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.save_station",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.save_station"
+                  ]
+                },
+                "description": "Updates the real TEST-ST-01 fixture (safe, it's test data). Clear station_id to create a new station instead \u2014 then data needs station_name, dealer, region, county at minimum.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"station_id\": \"TEST-ST-01\",\n  \"data\": {\n    \"contact_phone\": \"+254700000000\",\n    \"contact_name\": \"TEST Station Manager\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Set Station Status",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.set_station_status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.set_station_status"
+                  ]
+                },
+                "description": "status: ACTIVE, SUSPENDED or DEACTIVATED.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"station_id\": \"TEST-ST-01\",\n  \"status\": \"ACTIVE\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Dealers (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.dealers",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.dealers"
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Dealer (one)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.dealer?dealer_id=TEST Dealer",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.dealer"
+                  ],
+                  "query": [
+                    {
+                      "key": "dealer_id",
+                      "value": "TEST Dealer"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Dealer",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.update_dealer",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.update_dealer"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"dealer_id\": \"TEST Dealer\",\n  \"data\": {\n    \"contact_phone\": \"+254700000000\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POS Devices (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.pos_devices",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.pos_devices"
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "POS Device (one)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.pos_device_record?device_id=TEST-POS-0002",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.pos_device_record"
+                  ],
+                  "query": [
+                    {
+                      "key": "device_id",
+                      "value": "TEST-POS-0002"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create POS Device",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.create_pos_device",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.create_pos_device"
+                  ]
+                },
+                "description": "device_id TEST-POS-0099 is new, won't collide with the existing TEST-POS-0001/2/3.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"device_id\": \"TEST-POS-0099\",\n  \"station_id\": \"TEST-ST-01\",\n  \"software_version\": \"TEST-1.0\",\n  \"make\": \"TEST\",\n  \"model\": \"TEST\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Set POS Device Status",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.set_pos_device_status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.set_pos_device_status"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"device_id\": \"TEST-POS-0002\",\n  \"status\": \"ACTIVE\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Fuel Products",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.fuel_products",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.fuel_products"
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": ""
+        },
+        {
+          "name": "Software & EPRA",
+          "item": [
+            {
+              "name": "Approved POS Software Versions",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.approved_versions",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.approved_versions"
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Add Approved Version",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.add_approved_version",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.add_approved_version"
+                  ]
+                },
+                "description": "TEST-1.0 already exists (used by the POS folder's examples) \u2014 TEST-2.0 is new, won't collide.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"version\": \"TEST-2.0\",\n  \"notes\": \"Added via Postman\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Remove Approved Version",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.remove_approved_version",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.remove_approved_version"
+                  ]
+                },
+                "description": "Left blank deliberately: run Approved POS Software Versions above and copy a row name in. Do NOT remove TEST-1.0's row unless you don't need the POS folder's examples (pos_device, authorise, etc.) to keep working \u2014 they all assume software_version TEST-1.0 is approved.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"row_name\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "EPRA Price History",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.epra_price_history",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.epra_price_history"
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Add EPRA Price",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.add_epra_price",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.add_epra_price"
+                  ]
+                },
+                "description": "Closes the previous price the day before effective_from. Refuses back-dated prices \u2014 effective_from must be after the current price's effective_from (2026-10-06 on the local site), so this uses a December date. epra-prices:manage belongs to OPS_FUEL_CARD (and SYSTEM_ADMIN).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{ops_email}}\",\n  \"product\": \"Automotive Gasoil Local Lot Costed (Litre)\",\n  \"price\": 220,\n  \"effective_from\": \"2026-12-01\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": ""
+        },
+        {
+          "name": "Wallet (Top-ups)",
+          "item": [
+            {
+              "name": "Top-ups (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.topups?actor={{admin_email}}&status=",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.topups"
+                  ],
+                  "query": [
+                    {
+                      "key": "actor",
+                      "value": "{{admin_email}}"
+                    },
+                    {
+                      "key": "status",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Makers see only their own; checkers/admin/auditor see all.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Top-up",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.create_topup",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.create_topup"
+                  ]
+                },
+                "description": "Requires FINANCE_MAKER or SYSTEM_ADMIN actor. Saves the new request's id to last_topup_id for Decide Top-up below.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{finance_maker_email}}\",\n  \"customer\": \"Jaguar Petroleum\",\n  \"amount\": 10000,\n  \"funding_account\": \"TEST BANK ACCT\",\n  \"reference\": \"TEST TOPUP {{$timestamp}}\",\n  \"remarks\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "if (body && body.message && body.message.id) {",
+                      "    pm.collectionVariables.set(\"last_topup_id\", body.message.id);",
+                      "    console.log(\"Saved top-up id:\", body.message.id);",
+                      "} else {",
+                      "    console.warn(\"top-up id not found in response:\", body);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Decide Top-up",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.decide_topup",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.decide_topup"
+                  ]
+                },
+                "description": "Requires FINANCE_CHECKER or SYSTEM_ADMIN actor, and cannot be the maker \u2014 that's why this uses finance_checker_email, not finance_maker_email. decision: Approved or Rejected (comment required for Rejected).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{finance_checker_email}}\",\n  \"request_id\": \"{{last_topup_id}}\",\n  \"decision\": \"Approved\",\n  \"comment\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": ""
+        },
+        {
+          "name": "Adjustments",
+          "item": [
+            {
+              "name": "Adjustments (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.adjustments?actor={{admin_email}}&status=",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.adjustments"
+                  ],
+                  "query": [
+                    {
+                      "key": "actor",
+                      "value": "{{admin_email}}"
+                    },
+                    {
+                      "key": "status",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Adjustment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.create_adjustment",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.create_adjustment"
+                  ]
+                },
+                "description": "direction: Credit or Debit. Saves the new request's id to last_adjustment_id for Decide Adjustment below.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{finance_maker_email}}\",\n  \"customer\": \"Jaguar Petroleum\",\n  \"direction\": \"Credit\",\n  \"amount\": 500,\n  \"reason\": \"TEST adjustment\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "if (body && body.message && body.message.id) {",
+                      "    pm.collectionVariables.set(\"last_adjustment_id\", body.message.id);",
+                      "    console.log(\"Saved adjustment id:\", body.message.id);",
+                      "} else {",
+                      "    console.warn(\"adjustment id not found in response:\", body);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Decide Adjustment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.decide_adjustment",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.decide_adjustment"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{finance_checker_email}}\",\n  \"request_id\": \"{{last_adjustment_id}}\",\n  \"decision\": \"Approved\",\n  \"comment\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": ""
+        },
+        {
+          "name": "Reversals",
+          "item": [
+            {
+              "name": "Reversals (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.reversals?actor={{admin_email}}&status=",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.reversals"
+                  ],
+                  "query": [
+                    {
+                      "key": "actor",
+                      "value": "{{admin_email}}"
+                    },
+                    {
+                      "key": "status",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Reversal",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.create_reversal",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.create_reversal"
+                  ]
+                },
+                "description": "transaction is a completed (Successful Fueling) Fuel Card Transaction Log name \u2014 g3ie40lg7o is the real TEST-TX-0030 fixture on the local site. One open reversal per fuelling, so this only works once per transaction; swap for a different completed transaction id if you get 'already has an open reversal'. OPS_FUEL_CARD, FINANCE_MAKER or SYSTEM_ADMIN may request. Saves the new request's id to last_reversal_id for Decide Reversal below.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{ops_email}}\",\n  \"transaction\": \"g3ie40lg7o\",\n  \"reason\": \"TEST reversal\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "if (body && body.message && body.message.id) {",
+                      "    pm.collectionVariables.set(\"last_reversal_id\", body.message.id);",
+                      "    console.log(\"Saved reversal id:\", body.message.id);",
+                      "} else {",
+                      "    console.warn(\"reversal id not found in response:\", body);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Decide Reversal",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.decide_reversal",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.decide_reversal"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{finance_checker_email}}\",\n  \"request_id\": \"{{last_reversal_id}}\",\n  \"decision\": \"Approved\",\n  \"comment\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": ""
+        },
+        {
+          "name": "Settlements & Credit Notes",
+          "item": [
+            {
+              "name": "Settlements (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.settlements?search=&station=TEST-ST-01&from_date=2026-09-01&to_date=2026-10-07&page=0",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.settlements"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "station",
+                      "value": "TEST-ST-01"
+                    },
+                    {
+                      "key": "from_date",
+                      "value": "2026-09-01"
+                    },
+                    {
+                      "key": "to_date",
+                      "value": "2026-10-07"
+                    },
+                    {
+                      "key": "page",
+                      "value": "0"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Settlement (one)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.settlement?settlement_id=g3ie40lg7o",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.settlement"
+                  ],
+                  "query": [
+                    {
+                      "key": "settlement_id",
+                      "value": "g3ie40lg7o"
+                    }
+                  ]
+                },
+                "description": "g3ie40lg7o is the real TEST-TX-0030 fixture \u2014 a settlement's id is the completed fuelling's own Fuel Card Transaction Log name.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Credit Notes (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.credit_notes?from_date=2026-09-01&to_date=2026-10-07&page=0",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.credit_notes"
+                  ],
+                  "query": [
+                    {
+                      "key": "from_date",
+                      "value": "2026-09-01"
+                    },
+                    {
+                      "key": "to_date",
+                      "value": "2026-10-07"
+                    },
+                    {
+                      "key": "page",
+                      "value": "0"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Credit Note (one)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.credit_note?credit_note_id=g3ie40lg7o:UNDER_CANOPY",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.credit_note"
+                  ],
+                  "query": [
+                    {
+                      "key": "credit_note_id",
+                      "value": "g3ie40lg7o:UNDER_CANOPY"
+                    }
+                  ]
+                },
+                "description": "credit_note_id is '<settlement id>:<UNDER_CANOPY|CONTRACTUAL>'. Discount rates are currently 0 on the local site, so the amount will show 0 \u2014 the lookup still succeeds either way.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": ""
+        },
+        {
+          "name": "Users",
+          "item": [
+            {
+              "name": "Portal Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.portal_login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.portal_login"
+                  ]
+                },
+                "description": "Checks a portal user's password and returns their Galana roles. Used by the Next.js app's own login form. usr here is the user LOGGING IN, not an 'actor'. pwd is deliberately blank \u2014 it's a real account password, paste the actual one in yourself (never commit it).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"usr\": \"{{admin_email}}\",\n  \"pwd\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Portal Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.portal_profile?usr={{admin_email}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.portal_profile"
+                  ],
+                  "query": [
+                    {
+                      "key": "usr",
+                      "value": "{{admin_email}}"
+                    }
+                  ]
+                },
+                "description": "Status and roles for one portal user \u2014 checked on every session.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Portal Users (list)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.portal_users",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.portal_users"
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Portal User (one)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.portal_user?email={{finance_maker_email}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.portal_user"
+                  ],
+                  "query": [
+                    {
+                      "key": "email",
+                      "value": "{{finance_maker_email}}"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Portal User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.create_portal_user",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.create_portal_user"
+                  ]
+                },
+                "description": "role_names are the suffixes after 'Galana ', e.g. FINANCE_MAKER, SYSTEM_ADMIN. station_id only matters for STATION_DEALER_MANAGER. Requires users:manage (SYSTEM_ADMIN). email is a brand-new throwaway address, not a real account \u2014 the three requests below assume you ran this first and act on that same user, not on admin_email/finance_maker_email etc.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"email\": \"test.portal.user@galana.co.ke\",\n  \"name\": \"Test Portal User\",\n  \"phone\": \"+254700000001\",\n  \"role_names\": [\n    \"FINANCE_MAKER\"\n  ],\n  \"status\": \"ACTIVE\",\n  \"station_id\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Portal User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.update_portal_user",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.update_portal_user"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"email\": \"test.portal.user@galana.co.ke\",\n  \"name\": \"Test Portal User (Updated)\",\n  \"phone\": \"+254700000002\",\n  \"role_names\": [\n    \"FINANCE_MAKER\"\n  ],\n  \"status\": \"ACTIVE\",\n  \"station_id\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Set Portal User Status",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.set_portal_user_status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.set_portal_user_status"
+                  ]
+                },
+                "description": "Any value other than 'ACTIVE' disables the account \u2014 INACTIVE is what a status read-back shows.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"email\": \"test.portal.user@galana.co.ke\",\n  \"status\": \"INACTIVE\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reset Portal User Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.reset_portal_user_password",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.reset_portal_user_password"
+                  ]
+                },
+                "description": "Sends Frappe's own password-reset email. No password is returned.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"email\": \"test.portal.user@galana.co.ke\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": ""
+        },
+        {
+          "name": "Settings & Audit",
+          "item": [
+            {
+              "name": "Portal Settings (get)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.portal_settings",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.portal_settings"
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Save Portal Settings",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.save_portal_settings",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.save_portal_settings"
+                  ]
+                },
+                "description": "A FINANCE_MAKER/FINANCE_CHECKER actor may only change underCanopyDiscountPerL/jaguarDiscountPerL \u2014 enforced in the Next.js app, not here; this raw endpoint accepts whatever a SYSTEM_ADMIN actor sends. Try with finance_maker_email + only the two discount fields to mirror the app's own behaviour.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"data\": {\n    \"maxQuantityPerTxnL\": 500,\n    \"maxValuePerTxn\": 200000,\n    \"underCanopyDiscountPerL\": 0,\n    \"jaguarDiscountPerL\": 0,\n    \"staleTransactionMinutes\": 30\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Write Audit Entry",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.audit",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.audit"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"actor\": \"{{admin_email}}\",\n  \"action\": \"TEST_ACTION\",\n  \"entity_type\": \"Station\",\n  \"entity_id\": \"TEST-ST-01\",\n  \"old\": {\n    \"status\": \"Active\"\n  },\n  \"new\": {\n    \"status\": \"Active\"\n  },\n  \"result\": \"SUCCESS\",\n  \"reason\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Record Audit (for one record)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.record_audit?entity_id=TEST-ST-01&limit=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.record_audit"
+                  ],
+                  "query": [
+                    {
+                      "key": "entity_id",
+                      "value": "TEST-ST-01"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Audit Log (filtered, paged)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/method/jpl_fuel_card.api.partner.v1.audit_log?search_user=&action=&entity_type=&result=&preset=&from_date=2026-09-01&to_date=2026-10-07&page=0&page_size=15",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "method",
+                    "jpl_fuel_card.api.partner.v1.audit_log"
+                  ],
+                  "query": [
+                    {
+                      "key": "search_user",
+                      "value": ""
+                    },
+                    {
+                      "key": "action",
+                      "value": ""
+                    },
+                    {
+                      "key": "entity_type",
+                      "value": ""
+                    },
+                    {
+                      "key": "result",
+                      "value": ""
+                    },
+                    {
+                      "key": "preset",
+                      "value": ""
+                    },
+                    {
+                      "key": "from_date",
+                      "value": "2026-09-01"
+                    },
+                    {
+                      "key": "to_date",
+                      "value": "2026-10-07"
+                    },
+                    {
+                      "key": "page",
+                      "value": "0"
+                    },
+                    {
+                      "key": "page_size",
+                      "value": "15"
+                    }
+                  ]
+                },
+                "description": "",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{galana_access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "description": ""
+        }
+      ],
+      "description": "require_galana_partner: the Galana service account only. Jaguar and POS are refused on everything in here."
+    }
+  ]
+}

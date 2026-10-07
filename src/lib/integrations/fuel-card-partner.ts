@@ -5,11 +5,17 @@
  *
  * Configuration (environment):
  *   FUEL_CARD_API_URL          base URL of the Frappe site, e.g. https://crm.example.co.ke
+ *                              Falls back to DEFAULT_FUEL_CARD_API_URL below when unset — most
+ *                              useful for deployments (e.g. Vercel Preview) that don't have this
+ *                              variable scoped to them. A deployment that DOES set it, correctly,
+ *                              to an environment whose backend isn't deployed yet still fails the
+ *                              same way the explicit value would — this fallback doesn't change that.
  *   FUEL_CARD_PARTNER_USERNAME partner API user (holds the "Galana Partner API" role)
  *   FUEL_CARD_PARTNER_PASSWORD its password
  */
 
 const METHOD_PREFIX = "/api/method/jpl_fuel_card.api.partner.v1."
+const DEFAULT_FUEL_CARD_API_URL = "https://erpstaging.jaguar-petroleum.com"
 
 export class FuelCardPartnerError extends Error {
   constructor(message: string, readonly status: number) {
@@ -27,17 +33,16 @@ export class FuelCardServiceAuthError extends FuelCardPartnerError {
 }
 
 export function isFuelCardPartnerConfigured() {
-  return Boolean(
-    process.env.FUEL_CARD_API_URL && process.env.FUEL_CARD_PARTNER_USERNAME && process.env.FUEL_CARD_PARTNER_PASSWORD,
-  )
+  // FUEL_CARD_API_URL always resolves (falls back to DEFAULT_FUEL_CARD_API_URL), so only the
+  // credentials actually gate whether a call can be attempted.
+  return Boolean(process.env.FUEL_CARD_PARTNER_USERNAME && process.env.FUEL_CARD_PARTNER_PASSWORD)
 }
 
 type Tokens = { accessToken: string; expiresAt: number }
 let cached: Tokens | null = null
 
 function baseUrl() {
-  const url = process.env.FUEL_CARD_API_URL
-  if (!url) throw new FuelCardPartnerError("FUEL_CARD_API_URL is not set", 500)
+  const url = process.env.FUEL_CARD_API_URL || DEFAULT_FUEL_CARD_API_URL
   return url.replace(/\/$/, "")
 }
 

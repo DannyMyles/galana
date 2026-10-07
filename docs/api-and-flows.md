@@ -305,6 +305,122 @@ The wallet is currently overdrawn by this data, so `authorise` will refuse until
 - Reconciliation records and the exception queue: not built, waiting on a decision.
 - The Jaguar portal's own balance still reads the old ledger, so it can differ from the partner balance above.
 - Driver OTP SMS: `authorise` returns the code, but nothing sends it.
-- Stuck "Dispensing" tickets never expire.
-- `v1.ingest_fuel_transaction` cannot load until the JPL default POS customer is set. Its public access is closed.
 - The `actor` field on portal writes is trusted from the Galana service account. Anyone holding that account can name any user as the actor.
+
+---
+
+## 10. Setting up a new ERPNext / Frappe environment (e.g. staging)
+
+This section is for standing the backend up somewhere other than the existing local site — the site this guide was otherwise written against already has all of this.
+
+### 10.1 Deploy and migrate
+
+Deploy `jpl_fuel_card` (and `jpl_crm`, for `generate_auth_code`) to the site, then run `bench --site <site> migrate`. This now creates automatically:
+
+- Every Galana doctype (listed in 10.3).
+- All 10 roles: `Galana SYSTEM_ADMIN`, `Galana FINANCE_MAKER`, `Galana FINANCE_CHECKER`, `Galana OPS_FUEL_CARD`, `Galana STATION_DEALER_MANAGER`, `Galana JAGUAR_CUSTOMER`, `Galana INTERNAL_AUDITOR`, `Galana Partner API`, `Jaguar Partner API`, `POS Partner API`.
+- The `User.galana_station` custom field.
+
+A deploy without a working `migrate` has nothing to interact with — a fresh site with just the code and no migrate has none of the doctypes, roles or that custom field yet.
+
+### 10.2 Manual setup after migrate
+
+Everything in 10.1 is structure, not data — this part is genuinely manual on each environment:
+
+1. **Service account**: create a `User` (Website User, enabled) with the `Galana Partner API` role and a password. This becomes `FUEL_CARD_PARTNER_USERNAME`/`FUEL_CARD_PARTNER_PASSWORD`.
+2. **At least one real admin**: a portal user with `Galana SYSTEM_ADMIN`, so someone can administer the portal from there.
+3. **Galana Settings data**: add the real customer(s) to `galana_customers` (must be an existing `Customer` record of type Company or Partnership — e.g. Jaguar Petroleum); set EPRA prices; approved POS software versions; the two discount rates (business figures, still pending from your manager); `stale_transaction_minutes` (30 is a reasonable default).
+4. **Enable the scheduler**: `bench --site <site> scheduler enable`, so the stale-ticket and EPRA-price-expiry jobs actually run.
+5. **Jaguar's account**, once his email is known: role `Jaguar Partner API`.
+6. **POS terminal accounts**, once details are known: role `POS Partner API`.
+7. **The underlying fuel-card data**, for anything beyond pure plumbing tests: the `Customer` record itself, its `Fuel Card Account` (Prepaid or Credit), `Fuel Card Vehicle`(s) and `Fuel Card Driver`(s), real stations/dealers/POS devices. None of this is Galana-specific — it's what every ticket is built on top of.
+
+The OAuth Client (`Galana Partner`) needs nothing — it self-creates on first login.
+
+### 10.3 Doctypes you'll be interacting with
+
+**Galana-specific** (owned by this integration):
+
+| Doctype | What it holds |
+|---|---|
+| Galana Settings (single) | The one settings doc: customers served, EPRA prices, approved POS software, transaction limits, discount rates, stale-transaction threshold |
+| Galana Customer (child of Galana Settings) | Which `Customer`s Galana serves — anyone else is invisible to the partner API |
+| Galana EPRA Price Item (child of Galana Settings) | EPRA price history per fuel product |
+| Galana Approved POS Software (child of Galana Settings) | Approved POS software versions |
+| Galana Dealer | Station operators |
+| Galana Station | Fuel stations, each linked to a Galana Dealer |
+| Galana Top Up Request | Wallet top-up requests (maker/checker) |
+| Galana Adjustment | Manual wallet credit/debit adjustments (maker/checker) |
+| Galana Reversal | Reversal requests against a completed fuelling (maker/checker) |
+
+**Shared with the existing Jaguar fuel-card app** (not Galana-specific, but every ticket runs through them):
+
+| Doctype | What it holds |
+|---|---|
+| Customer | The ERPNext customer, e.g. "Jaguar Petroleum." Must be customer_type Company or Partnership |
+| Fuel Card Account | One per customer: payment_type (Prepaid/Credit), account_status, credit_limit |
+| Fuel Card Vehicle | Vehicles under an account: approval_status, limit_value, remaining_balance |
+| Fuel Card Driver | Drivers under an account, assigned to vehicles |
+| Fuel Card Transaction Log | The ticket itself. `authorization_status` (Reserved → Dispensing → Consumed/Expired/Refunded/Pending Reconciliation) drives the whole lifecycle — the same row is updated in place from authorisation through completion, not replaced |
+| POS Device Management | Registered POS terminals: status, software_version |
+| POS Device Movement | A device's allocation history to a station |
+
+**Frappe/system doctypes this integration relies on:**
+
+| Doctype | What it holds |
+|---|---|
+| User | Portal accounts. Galana roles are named "Galana `<RoleName>`"; the custom field `galana_station` scopes a STATION_DEALER_MANAGER to one station |
+| Role | The 10 roles listed in 10.1 |
+| OAuth Client | One record, app_name "Galana Partner" — self-creates on first login; holds the client_id/secret used to sign `transaction_events` |
+| OAuth Bearer Token | One per login; the access/refresh tokens partner accounts use |
+| Activity Log | The audit trail — every portal write is recorded here and shown back via `record_audit`/`audit_log` |
+
+---
+
+## 11. Every role and setting, in full
+
+### 11.1 The three partner API roles (machine access to the backend API)
+
+These are Frappe roles. Nobody logs into a browser with them — they're the credential a system uses to call the API.
+
+| Role | Who holds it | Can call |
+|---|---|---|
+| `Galana Partner API` | The Galana service account. Used by the Next.js portal server itself for every request it makes to Frappe. | Everything under `jpl_fuel_card.api.partner.v1` |
+| `Jaguar Partner API` | Brian's (Jaguar's) system. | `login`, `refresh_token`, `logout`, `customer_float`, `epra_prices`, `transaction_events` |
+| `POS Partner API` | A POS terminal (or a shared account across terminals — see "POS terminal accounts" discussion). | The same set as Jaguar, plus `pos_device`, `validate_ticket`, `authorise`, `start_fuelling`, `request_otp`, `confirm_otp`, `cancel_transaction` |
+
+### 11.2 The seven Galana portal roles (human browser login to the Next.js app)
+
+These are Frappe roles named `Galana <RoleName>`. A person logs into the Galana portal with an email and password, and sees only what their role permits. A role can hold several of the fine-grained permissions below; the table lists exactly what each one currently grants.
+
+| Role | What it's for | Can do |
+|---|---|---|
+| `SYSTEM_ADMIN` | Full administrator — the only role that can manage users, stations, devices, dealers and settings. | Manage users, stations, POS devices, dealers; view the audit log; view the wallet and all transactions; manage settlements and reconciliation; resolve exceptions; monitor stations and tickets; every report (finance, ops, Jaguar, dealer); manage every setting; view integrations; view credit notes, adjustments, reversals, settlements, reconciliation, exceptions |
+| `FINANCE_MAKER` | Requests money movements; cannot approve their own requests. | Create wallet top-up requests; view the wallet; manage credit notes; view all transactions; manage settlements and reconciliation; resolve exceptions; finance reports; create and view adjustments; request and view reversals; view credit notes and exceptions; **set the two discount rates** (added so Finance owns the business figures without needing full `SYSTEM_ADMIN` settings access) |
+| `FINANCE_CHECKER` | Approves or rejects what a Finance Maker requested — segregation of duties is enforced: a checker can never approve their own request. | Approve/reject top-ups; view the wallet; manage credit notes; view all transactions; manage settlements and reconciliation; resolve exceptions; finance reports; approve/view adjustments; approve/view reversals; view credit notes and exceptions; set the two discount rates |
+| `OPS_FUEL_CARD` | Day-to-day fuel card operations: stations, EPRA prices, tickets. | Manage and monitor stations; **manage EPRA prices** (the only role besides `SYSTEM_ADMIN` that can call `add_epra_price`); monitor tickets; view all transactions; resolve exceptions; ops reports; view credit notes; view and request reversals; view settlements and reconciliation; view exceptions |
+| `STATION_DEALER_MANAGER` | A dealer's own station manager — scoped to exactly one station via the `galana_station` field on their `User` record. | Validate tickets and dispense at their station; view transactions for their station only (not every station); dealer reports (also scoped to their station) |
+| `JAGUAR_CUSTOMER` | A Jaguar person who wants to look at figures in the Galana portal itself (separate from Brian's API integration — see 11.3). | View the Jaguar report only — nothing else; lands directly on Reports after login since it's the only page available |
+| `INTERNAL_AUDITOR` | Read-only oversight across the whole portal. | Read-only audit access; view the audit log; view all transactions; view credit notes, adjustments, reversals, settlements, reconciliation, exceptions; view integrations. Cannot create, approve or change anything |
+
+### 11.3 Jaguar and POS: API role vs. portal role are different things
+
+This tripped up the "who is `admin@jaguar-petroleum.com`" question, so it's worth stating plainly: `Jaguar Partner API` (11.1) and `Galana JAGUAR_CUSTOMER` (11.2) are unrelated roles that happen to both belong to "Jaguar." The first is Brian's system calling the API programmatically; the second is a person logging into the Galana web portal in a browser to see the Jaguar report. One Frappe `User` can hold both if the same credential should do both jobs, or they can be two separate accounts. POS terminals only ever have the API role (11.1) — there is no portal login for a machine.
+
+### 11.4 Galana Settings — every field
+
+Found at Administration → Settings in the portal, stored on the single `Galana Settings` doctype in Frappe.
+
+| Field | Label in the UI | Unit | What it does | Who can set it |
+|---|---|---|---|---|
+| `maxQuantityPerTxnL` | Max quantity per transaction | L | Enforced at authorisation on every redemption — a request for more litres than this is declined at the station | `SYSTEM_ADMIN` only |
+| `maxValuePerTxn` | Max value per transaction | KES | Quantity × EPRA price may not exceed this at authorisation | `SYSTEM_ADMIN` only |
+| `underCanopyDiscountPerL` | Station under-canopy discount | KES/L | Per-litre discount deducted from the dealer's net payable on settlement, and raised as a credit note to Jaguar (`UNDER_CANOPY`) | `SYSTEM_ADMIN`, `FINANCE_MAKER`, `FINANCE_CHECKER` |
+| `jaguarDiscountPerL` | Jaguar contractual discount | KES/L | Per-litre discount raised as a credit note to Jaguar (`CONTRACTUAL`) — the wallet is still loaded with the full prepaid amount, and this is *not* deducted from the dealer | `SYSTEM_ADMIN`, `FINANCE_MAKER`, `FINANCE_CHECKER` |
+| `staleTransactionMinutes` | Stale transaction threshold | min | A ticket stuck in Dispensing (started fuelling, never completed) for longer than this is automatically moved to Pending Reconciliation by the scheduled job every 10 minutes | `SYSTEM_ADMIN` only |
+
+Both discount fields start at 0 — the actual KES/L figures are still pending from your manager (see §9, Known gaps).
+
+**A finance actor saving settings can only change the two discount fields** — the server merges their request with the stored values for every other field, so even a crafted payload with other fields set can't change limits or the threshold. A `SYSTEM_ADMIN` actor can change all five.
+
+Three more things live on `Galana Settings` but aren't on this form — they have their own pages and endpoints, covered in §10.3's doctype table: which customers Galana serves (`galana_customers` → Stations/Customers), EPRA prices (`epra_prices` → Stations → EPRA Prices, §"create EPRA price" above), and approved POS software versions (`approved_pos_software` → Stations → POS Devices).
