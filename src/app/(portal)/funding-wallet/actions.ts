@@ -13,7 +13,7 @@ async function signedIn() {
 }
 
 /** Finance Maker creates a top-up request. Approval only; nothing is posted to the ledger. */
-export async function requestTopUp(input: { customer: string; amount: number; fundingAccount: string; reference: string; remarks?: string }) {
+export async function requestTopUp(input: { customer: string; amount: number; fundingAccount: string; reference?: string; remarks?: string }) {
   const user = await signedIn()
   try {
     await createTopUp(user.email, input)

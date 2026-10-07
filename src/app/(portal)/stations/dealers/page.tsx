@@ -1,6 +1,8 @@
 import { PageHeader } from "@/components/shared/page-header"
 import { StationsSubNav } from "@/components/stations/stations-subnav"
 import { DealersTable } from "@/components/stations/dealers-table"
+import { DealerFormDialog } from "@/components/stations/dealer-form-dialog"
+import { AddButton } from "@/components/shared/add-button"
 import { getDealers } from "@/lib/data/dealers"
 import { requirePermission } from "@/lib/rbac/guard"
 import { hasPermission } from "@/lib/rbac/roles"
@@ -14,7 +16,8 @@ export default async function DealersPage() {
     <div>
       <PageHeader
         title="Dealers"
-        description="Station ownership and settlement information. Dealers are onboarded in the Frappe onboarding workflow."
+        description="Station ownership and settlement information."
+        actions={canManage ? <DealerFormDialog trigger={<AddButton label="Add dealer" />} /> : undefined}
       />
       <StationsSubNav />
       <DealersTable dealers={dealers} canManage={canManage} />

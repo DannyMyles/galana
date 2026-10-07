@@ -6,7 +6,7 @@ import { writeAuditLog } from "@/lib/audit/log"
 import { hasPermission } from "@/lib/rbac/roles"
 import { parseCsv } from "@/lib/export/csv"
 import { stationSchema, type StationInput } from "@/lib/validations/station"
-import { getStation, listDealers, listFuelProducts, listStations, saveStation as saveStationRecord, setStationStatus as setStatusRecord, type StationStatusCode } from "@/lib/integrations/fuel-card-partner"
+import { createDealer as createDealerRecord, getStation, listDealers, listFuelProducts, listStations, saveStation as saveStationRecord, setStationStatus as setStatusRecord, type PortalDealer, type StationStatusCode } from "@/lib/integrations/fuel-card-partner"
 
 class ActionError extends Error {}
 
@@ -66,7 +66,6 @@ export async function saveStation(id: string | null, input: StationInput) {
 export async function setStationStatus(stationId: string, status: StationStatusCode) {
   const user = await requireStationManager()
   const before = await getStation(stationId)
-  // US-ADM-005 / US-OPS-002: the Frappe record is set to PENDING so the status syncs back to JPL OMC.
   await setStatusRecord(actorOf(user), stationId, status)
   await writeAuditLog({ userId: user.id, role: user.roles[0], action: "STATION_STATUS_CHANGED", entityType: "Station", entityId: stationId, oldValues: { status: before.status }, newValues: { status }, result: "SUCCESS" })
   revalidatePath("/stations")
@@ -83,30 +82,52 @@ export async function bulkUploadStations(csv: string) {
   const missing = ["name", "code", "region", "county", "products"].filter((c) => !header.includes(c))
   if (missing.length) return { created: 0, errors: [{ line: 1, message: `Missing required column(s): ${missing.join(", ")}. Expected: ${TEMPLATE_COLUMNS.join(", ")}` }] }
 
-  const [products, dealers, existing] = await Promise.all([
+  const [products, dealerRows, existing] = await Promise.all([
     listFuelProducts(),
     listDealers(),
     listStations({ pageSize: 1000 }),
   ])
+  // Keyed by lowercased name, so a dealer created for an earlier row in this same file is
+  // reused for later rows instead of being created again.
+  const dealers = new Map<string, PortalDealer>(dealerRows.map((d) => [d.name.toLowerCase(), d]))
   const seen = new Set(existing.rows.map((s) => s.code))
   const errors: { line: number; message: string }[] = []
   let created = 0
+  let dealersCreated = 0
 
   for (let i = 1; i < rows.length; i++) {
     const cells = Object.fromEntries(header.map((h, idx) => [h, rows[i][idx] ?? ""]))
     const line = i + 1
     const codes = cells.products.split(/[;|]/).map((c) => c.trim()).filter(Boolean)
     const productIds = codes.map((c) => products.find((p) => p.code.toLowerCase() === c.toLowerCase() || p.name.toLowerCase() === c.toLowerCase())?.id)
-    const dealer = cells.dealer ? dealers.find((d) => d.name.toLowerCase() === cells.dealer.toLowerCase()) : undefined
 
-    const parsed = stationSchema.safeParse({ ...cells, dealerId: dealer?.id, productIds: productIds.filter((v): v is string => !!v) })
+    const parsed = stationSchema.safeParse({ ...cells, dealerId: undefined, productIds: productIds.filter((v): v is string => !!v) })
     if (!parsed.success) { errors.push({ line, message: parsed.error.issues[0].message }); continue }
     if (productIds.some((p) => !p)) { errors.push({ line, message: `Unknown product in "${cells.products}" (use ${products.map((p) => p.code).join(", ")})` }); continue }
-    if (cells.dealer && !dealer) { errors.push({ line, message: `Dealer "${cells.dealer}" does not exist` }); continue }
     if (seen.has(parsed.data.code)) { errors.push({ line, message: `Station code ${parsed.data.code} already exists` }); continue }
 
+    // A dealer named in the sheet that doesn't exist yet is created on the fly (reused across
+    // rows in the same file via `dealers`), rather than rejecting the row.
+    let dealerId: string | undefined
+    const dealerName = cells.dealer?.trim()
+    if (dealerName) {
+      let dealer = dealers.get(dealerName.toLowerCase())
+      if (!dealer) {
+        try {
+          dealer = await createDealerRecord(actor, { name: dealerName })
+          dealers.set(dealerName.toLowerCase(), dealer)
+          dealersCreated += 1
+          await writeAuditLog({ userId: user.id, role: user.roles[0], action: "DEALER_CREATED", entityType: "Dealer", entityId: dealer.id, newValues: { source: "bulk-upload", name: dealerName }, result: "SUCCESS" })
+        } catch (error) {
+          errors.push({ line, message: error instanceof Error ? error.message : `Could not create dealer "${dealerName}"` })
+          continue
+        }
+      }
+      dealerId = dealer.id
+    }
+
     try {
-      const station = await saveStationRecord(actor, null, toPayload(parsed.data))
+      const station = await saveStationRecord(actor, null, { ...toPayload(parsed.data), dealer: dealerId })
       seen.add(parsed.data.code)
       created += 1
       await writeAuditLog({ userId: user.id, role: user.roles[0], action: "STATION_CREATED", entityType: "Station", entityId: station.id, newValues: { source: "bulk-upload", code: parsed.data.code }, result: "SUCCESS" })
@@ -115,7 +136,8 @@ export async function bulkUploadStations(csv: string) {
     }
   }
 
-  await writeAuditLog({ userId: user.id, role: user.roles[0], action: "STATION_BULK_UPLOAD", entityType: "Station", newValues: { created, errors: errors.length }, result: errors.length && !created ? "FAILURE" : "SUCCESS", failureReason: errors.length ? `${errors.length} row(s) rejected` : undefined })
+  await writeAuditLog({ userId: user.id, role: user.roles[0], action: "STATION_BULK_UPLOAD", entityType: "Station", newValues: { created, dealersCreated, errors: errors.length }, result: errors.length && !created ? "FAILURE" : "SUCCESS", failureReason: errors.length ? `${errors.length} row(s) rejected` : undefined })
   revalidatePath("/stations")
+  if (dealersCreated) revalidatePath("/stations/dealers")
   return { created, errors }
 }

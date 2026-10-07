@@ -472,6 +472,13 @@ export function updateDealer(actor: string, dealerId: string, data: { contactNam
   return post<PortalDealer>("update_dealer", { actor, dealer_id: dealerId, data })
 }
 
+export function createDealer(actor: string, data: { name: string; contactName?: string | null; contactPhone?: string | null; contactEmail?: string | null; settlementAccount?: string | null }) {
+  return post<PortalDealer>("create_dealer", {
+    actor, dealer_name: data.name, contact_name: data.contactName,
+    contact_phone: data.contactPhone, contact_email: data.contactEmail, settlement_account: data.settlementAccount,
+  })
+}
+
 export function listFuelProducts() {
   return get<PortalProduct[]>("fuel_products", {})
 }
@@ -717,9 +724,10 @@ export type PortalDashboard = {
   finance?: {
     totalConsumption: { transactions: number; litres: number; amount: number }
     fuelWalletBalance: number
-    totalJaguarFunding: Unavailable
-    dealerSettlementLiability: Unavailable
-    outstandingReconciliationItems: Unavailable
+    /** All-time approved top-ups, across every Galana customer. */
+    totalJaguarFunding: number
+    /** Running total of net payable to dealers across every settlement (all PENDING — nothing is posted). */
+    dealerSettlementLiability: number
   }
   jaguar?: {
     prepaidBalance: number
@@ -783,7 +791,8 @@ export function listTopUps(actor: string, status?: TopUpStatus) {
   return get<{ rows: TopUpRow[] }>("topups", { actor, status }).then((r) => r.rows)
 }
 
-export function createTopUp(actor: string, input: { customer: string; amount: number; fundingAccount: string; reference: string; remarks?: string }) {
+/** reference is optional — the backend generates one (TOPUP-YYYYMMDD-XXXX) when omitted. */
+export function createTopUp(actor: string, input: { customer: string; amount: number; fundingAccount: string; reference?: string; remarks?: string }) {
   return post<TopUpRow>("create_topup", {
     actor, customer: input.customer, amount: input.amount, funding_account: input.fundingAccount,
     reference: input.reference, remarks: input.remarks,

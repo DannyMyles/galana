@@ -89,14 +89,11 @@ export default async function DashboardPage() {
 
       {d.finance && (
         <Section title="Finance">
-          <div className="mb-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mb-5 grid gap-5 sm:grid-cols-2 2xl:grid-cols-4">
             <KpiCard label="Fuel-wallet balance" value={<MoneyDisplay amount={d.finance.fuelWalletBalance} />} icon={CheckCircle2} iconTint="emerald" />
             <KpiCard label="Consumption (30 days)" value={<MoneyDisplay amount={d.finance.totalConsumption.amount} />} icon={CheckCircle2} iconTint="blue" />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Unavailable item={d.finance.totalJaguarFunding} />
-            <Unavailable item={d.finance.dealerSettlementLiability} />
-            <Unavailable item={d.finance.outstandingReconciliationItems} />
+            <KpiCard label="Total Jaguar funding" value={<MoneyDisplay amount={d.finance.totalJaguarFunding} />} helperText="All-time approved top-ups" icon={CheckCircle2} iconTint="purple" />
+            <KpiCard label="Dealer settlement liability" value={<MoneyDisplay amount={d.finance.dealerSettlementLiability} />} helperText="Pending, not yet posted" icon={CheckCircle2} iconTint="blue" />
           </div>
           <div className="mt-5">
             <TrendChart title="Consumption per day (KES)" unit="KES" data={(d.trend ?? []).map((t) => ({ date: t.date, value: t.amount }))} />

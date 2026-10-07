@@ -80,7 +80,6 @@ export default async function StationDetailPage({ params }: { params: Promise<{ 
               { label: "Address", value: s.address },
               { label: "Coordinates", value: s.latitude != null && s.longitude != null ? `${s.latitude}, ${s.longitude}` : null },
               { label: "Products", value: s.products.map((p) => p.product.name).join(", ") || null },
-              { label: "JPL OMC sync", value: <StatusBadge status={s.jplSyncStatus} /> },
             ]} />
           </DetailSection>
           <DetailSection title="Dealer & contact">

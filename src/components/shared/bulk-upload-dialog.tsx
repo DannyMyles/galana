@@ -3,6 +3,7 @@
 import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import * as XLSX from "xlsx"
 import { Download, Upload } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -82,18 +83,25 @@ export function BulkUploadDialog({
 
         <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-[#DADCEB] px-4 py-8 text-center transition-colors hover:border-[#1226AA]/50 hover:bg-[#F6F7FD]">
           <Upload className="size-6 text-[#1226AA]" />
-          <span className="text-sm font-medium">{fileName || "Choose a .csv file"}</span>
+          <span className="text-sm font-medium">{fileName || "Choose a .csv or .xlsx file"}</span>
           <input
             ref={inputRef}
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             className="sr-only"
             onChange={async (e) => {
               const file = e.target.files?.[0]
               if (!file) return
               setResult(null)
               setFileName(file.name)
-              setCsv(await file.text())
+              const isExcel = /\.xlsx?$/i.test(file.name)
+              if (isExcel) {
+                const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" })
+                const sheet = workbook.Sheets[workbook.SheetNames[0]]
+                setCsv(XLSX.utils.sheet_to_csv(sheet))
+              } else {
+                setCsv(await file.text())
+              }
             }}
           />
         </label>

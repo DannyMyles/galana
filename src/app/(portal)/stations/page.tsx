@@ -12,7 +12,7 @@ import { bulkUploadStations } from "@/app/(portal)/stations/actions"
 import { AddButton } from "@/components/shared/add-button"
 
 const TEMPLATE = `name,code,region,county,address,latitude,longitude,contactName,contactPhone,contactEmail,dealer,products
-Galana Karen,KR002,Nairobi,Nairobi,Ngong Road,-1.3,36.7,Jane Doe,+254700000001,karen@example.com,Galana Westlands Dealer Ltd,PMS;AGO
+Galana Karen,KR002,Nairobi,Nairobi,Ngong Road,-1.3,36.7,Jane Doe,+254700000001,karen@example.com,Galana Westlands Dealer Ltd,Premium Motor Spirit Local Lot Costed (Litre);Automotive Gasoil Local Lot Costed (Litre)
 `
 
 export default async function StationsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -27,13 +27,13 @@ export default async function StationsPage({ searchParams }: { searchParams: Pro
     <div>
       <PageHeader
         title="Stations"
-        description="Station master data, product availability and JPL OMC sync status."
+        description="Station master data and product availability."
         actions={
           canManage ? (
             <>
               <BulkUploadDialog
                 title="Bulk upload stations"
-                description="Upload a CSV to onboard many stations at once. Valid rows are created; invalid rows are reported with their line number."
+                description="Upload a spreadsheet to onboard many stations at once. A dealer name that doesn't exist yet is created automatically. Valid rows are created; invalid rows are reported with their line number."
                 templateName="stations-template.csv"
                 template={TEMPLATE}
                 onUpload={bulkUploadStations}

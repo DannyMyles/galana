@@ -69,7 +69,7 @@ export function StationFormDialog({
     setBusy(true)
     try {
       await saveStation(station?.id ?? null, input)
-      toast.success(station ? `${v.name} updated. JPL OMC sync queued.` : `${v.name} added. JPL OMC sync queued.`)
+      toast.success(station ? `${v.name} updated.` : `${v.name} added.`)
       setOpen(false)
       if (!station) setV(EMPTY)
       router.refresh()
@@ -86,7 +86,7 @@ export function StationFormDialog({
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{station ? "Edit station" : "Add station"}</DialogTitle>
-          <DialogDescription>Station master data. Changes are queued to sync back to JPL OMC onboarding.</DialogDescription>
+          <DialogDescription>Station master data.</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 sm:grid-cols-2">

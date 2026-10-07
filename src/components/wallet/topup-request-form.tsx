@@ -20,7 +20,6 @@ export function TopUpRequestForm({ customers }: { customers: string[] }) {
           customer: String(formData.get("customer") ?? ""),
           amount: Number(formData.get("amount") ?? 0),
           fundingAccount: String(formData.get("fundingAccount") ?? ""),
-          reference: String(formData.get("reference") ?? ""),
           remarks: String(formData.get("remarks") ?? "") || undefined,
         })
         setDone(true)
@@ -42,8 +41,8 @@ export function TopUpRequestForm({ customers }: { customers: string[] }) {
       </label>
       <label className="grid gap-1 text-sm">Amount (KES)<Input name="amount" type="number" min="1" step="0.01" required /></label>
       <label className="grid gap-1 text-sm">Funding account<Input name="fundingAccount" required placeholder="e.g. KES 1234567890 (Jaguar)" /></label>
-      <label className="grid gap-1 text-sm">Reference<Input name="reference" required /></label>
       <label className="grid gap-1 text-sm">Remarks<Input name="remarks" /></label>
+      <p className="text-xs text-[#6A6C8C]">A reference is generated automatically (e.g. TOPUP-20261008-X7K2).</p>
       {error && <p className="rounded-xl bg-[#EB2239]/10 px-4 py-2.5 text-sm text-[#D01A2F]">{error}</p>}
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>{isPending ? "Submitting…" : "Submit for approval"}</Button>

@@ -58,10 +58,6 @@ export function StationsTable({
       ),
     },
     { header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    {
-      header: "JPL OMC sync",
-      cell: ({ row }) => <StatusBadge status={row.original.jplSyncStatus} />,
-    },
     actionsColumn<StationListRow>((r) => (
       <RowActions
         actions={[
