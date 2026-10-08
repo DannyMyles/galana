@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { auth } from "@/auth"
-import { PageHeader } from "@/components/shared/page-header"
+import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { KpiCard } from "@/components/shared/kpi-card"
 import { MiniTable } from "@/components/shared/mini-table"
 import { MoneyDisplay, LitresDisplay } from "@/components/shared/money-display"
@@ -37,16 +37,15 @@ export default async function DashboardPage() {
   await requirePermission(["reports:ops", "reports:finance", "reports:jaguar", "reports:dealer"])
   const session = await auth()
   const [d, quote] = await Promise.all([dashboardFor(session!.user!.email as string), getRandomQuote()])
+  const firstName = (session?.user?.name ?? "there").split(" ")[0]
 
   return (
     <div>
-      <PageHeader
-        title="Dashboard"
-        description={d.scope === "station" ? `Your station: ${d.dealer?.stationName ?? d.station}` : "Operations, finance and Jaguar figures from the fuel card service."}
+      <DashboardHeader
+        firstName={firstName}
+        subtitle={d.scope === "station" ? `Your station: ${d.dealer?.stationName ?? d.station}` : "Operations, finance and Jaguar figures from the fuel card service."}
+        quote={<QuoteCard quote={quote} />}
       />
-      <div className="mb-6 rounded-xl border border-[#E4E7F2] bg-white">
-        <QuoteCard quote={quote} />
-      </div>
 
       {d.operations && (
         <Section title="Operations">

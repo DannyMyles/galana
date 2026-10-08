@@ -12,10 +12,12 @@ function greetingFor(date: Date) {
 
 export function DashboardHeader({
   firstName,
+  subtitle,
   actions,
   quote,
 }: {
   firstName: string
+  subtitle?: string
   actions?: ReactNode
   quote?: ReactNode
 }) {
@@ -38,7 +40,7 @@ export function DashboardHeader({
           {now ? greetingFor(now) : "Welcome"}, {firstName}
         </h1>
         <p className="mt-1.5 text-sm text-[#6A6C8C]">
-          Here&apos;s what&apos;s happening with your fuel card solution today.
+          {subtitle ?? "Here's what's happening with your fuel card solution today."}
         </p>
         {actions && <div className="mt-4 flex flex-wrap items-center gap-3">{actions}</div>}
       </div>
