@@ -5,6 +5,8 @@ import { KpiCard } from "@/components/shared/kpi-card"
 import { MiniTable } from "@/components/shared/mini-table"
 import { MoneyDisplay, LitresDisplay } from "@/components/shared/money-display"
 import { DateTimeDisplay } from "@/components/shared/date-time-display"
+import { QuoteCard } from "@/components/dashboard/quote-card"
+import { getRandomQuote } from "@/lib/data/quote"
 import { dashboardFor } from "@/lib/data/portal-reports"
 import { BarsChart, DonutChart, TrendChart } from "@/components/charts/portal-charts"
 import { requirePermission } from "@/lib/rbac/guard"
@@ -34,7 +36,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default async function DashboardPage() {
   await requirePermission(["reports:ops", "reports:finance", "reports:jaguar", "reports:dealer"])
   const session = await auth()
-  const d = await dashboardFor(session!.user!.email as string)
+  const [d, quote] = await Promise.all([dashboardFor(session!.user!.email as string), getRandomQuote()])
 
   return (
     <div>
@@ -42,6 +44,9 @@ export default async function DashboardPage() {
         title="Dashboard"
         description={d.scope === "station" ? `Your station: ${d.dealer?.stationName ?? d.station}` : "Operations, finance and Jaguar figures from the fuel card service."}
       />
+      <div className="mb-6 rounded-xl border border-[#E4E7F2] bg-white">
+        <QuoteCard quote={quote} />
+      </div>
 
       {d.operations && (
         <Section title="Operations">
